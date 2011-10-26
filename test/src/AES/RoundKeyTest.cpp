@@ -65,6 +65,29 @@ namespace AES {
 			CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
 		}
 	}
+
+	void RoundKeyTest::testRoundNumber128() {
+		const unsigned char key[] = { 
+			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
+		};
+
+		const unsigned char expected[] = {
+			0x47,0xf7,0xf7,0xbc,0x95,0x35,0x3e,0x03,0xf9,0x6c,0x32,0xbc,0xfd,0x05,0x8d,0xfd
+		};
+		
+		const RoundKey rKey( std::vector<unsigned char>( key, key + 16 ) );
+		const std::vector<unsigned char> result = rKey.Value( 4 );
+		
+		const unsigned int keySize = result.size();
+		CPPUNIT_ASSERT_EQUAL( 16, (int)keySize );
+		
+		for( unsigned int i = 0; i < keySize; i++ ){
+			std::ostringstream stream;
+			stream << "Element " << i << " Differs";
+			
+			CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+		}
+	}
 	
 	// 192 Bit Tests
 	void RoundKeyTest::testBitSize192() {
@@ -116,6 +139,30 @@ namespace AES {
 		
 		const unsigned int keySize = result.size();
 		CPPUNIT_ASSERT_EQUAL( 208, (int)keySize );
+		
+		for( unsigned int i = 0; i < keySize; i++ ){
+			std::ostringstream stream;
+			stream << "Element " << i << " Differs";
+			
+			CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+		}
+	}
+	
+	void RoundKeyTest::testRoundNumber192() {
+		const unsigned char key[] = { 
+			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
+			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17
+		};
+
+		const unsigned char expected[] = {
+			0x58,0xe1,0x51,0xab,0x04,0xa2,0xa5,0x55,0x7e,0xff,0xb5,0x41,0x62,0x45,0x08,0x0c
+		};
+		
+		const RoundKey rKey( std::vector<unsigned char>( key, key + 24 ) );
+		const std::vector<unsigned char> result = rKey.Value( 4 );
+		
+		const unsigned int keySize = result.size();
+		CPPUNIT_ASSERT_EQUAL( 16, (int)keySize );
 		
 		for( unsigned int i = 0; i < keySize; i++ ){
 			std::ostringstream stream;
@@ -179,6 +226,30 @@ namespace AES {
 		const unsigned int keySize = result.size();
 		CPPUNIT_ASSERT_EQUAL( 240, (int)keySize );
 	
+		for( unsigned int i = 0; i < keySize; i++ ){
+			std::ostringstream stream;
+			stream << "Element " << i << " Differs";
+			
+			CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+		}
+	}
+	
+	void RoundKeyTest::testRoundNumber256() {
+		const unsigned char key[] = { 
+			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
+			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f 
+		};
+
+		const unsigned char expected[] = {
+			0xae, 0x87, 0xdf, 0xf0, 0x0f, 0xf1, 0x1b, 0x68, 0xa6, 0x8e, 0xd5, 0xfb, 0x03, 0xfc, 0x15, 0x67
+		};
+		
+		const RoundKey rKey( std::vector<unsigned char>( key, key + 32 ) );
+		const std::vector<unsigned char> result = rKey.Value( 4 );
+		
+		const unsigned int keySize = result.size();
+		CPPUNIT_ASSERT_EQUAL( 16, (int)keySize );
+		
 		for( unsigned int i = 0; i < keySize; i++ ){
 			std::ostringstream stream;
 			stream << "Element " << i << " Differs";

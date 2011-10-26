@@ -1,6 +1,11 @@
 project( CryptoCL )
 cmake_minimum_required( VERSION 2.8 )
 
+set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/" )
+
+include( CopyFile )
+include( Architecture )
+
 # TQDLib
 set( TQDLIB_DIR "" CACHE PATH "TQDLib Base Directory")
 if( TQDLIB_DIR )
@@ -69,11 +74,11 @@ endif( CODE_COVERAGE )
 # Compilation
 include_directories( "include" )
 
-add_library( cryptocl STATIC ${PROJECT_SOURCES} ${PROJECT_HEADERS} )
+add_library( cryptocl STATIC ${PROJECT_SOURCES} ${PROJECT_HEADERS} ${PROJECT_DATA} )
 target_link_libraries( cryptocl ${LIB_GENERAL} )
 
 if( BUILD_SHARED )
-	add_library( cryptocl-s SHARED ${PROJECT_SOURCES} ${PROJECT_HEADERS} )
+	add_library( cryptocl-s SHARED ${PROJECT_SOURCES} ${PROJECT_HEADERS} ${PROJECT_DATA} )
 	target_link_libraries( cryptocl-s ${LIB_GENERAL} )
 endif( BUILD_SHARED )
 

@@ -70,7 +70,7 @@ uchar gmul(uchar a, uchar b) {
 	return p;
 }
 
-__kernel void encrypt( __global const uchar rkey[240], __global const uchar *data, __global uchar *result ) {
+__kernel void encrypt( __global const uchar *rkey, __global const uchar *data, __global uchar *result, const uint rounds ) {
 	const uint idx = get_global_id( 0 );
 	const uint startPos = 16 * idx;
 	
@@ -133,13 +133,13 @@ __kernel void encrypt( __global const uchar rkey[240], __global const uchar *dat
 	}
 	
 	/* Add Round Key */
-	for (uint i = 0; i < 16; i++) block[i] = block[i] ^ rkey[14*16+i];
+	for (uint i = 0; i < 16; i++) block[i] = block[i] ^ rkey[rounds*16+i];
 		
 	/* Copy Result */
 	for( uint i = 0; i < 16; i++ ) result[startPos+i] = block[i];
 }
 
-__kernel void decrypt( __global const uchar rkey[240], __global const uchar *data, __global uchar *result ) {
+__kernel void decrypt( __global const uchar *rkey, __global const uchar *data, __global uchar *result, const uint rounds ) {
 	const uint idx = get_global_id( 0 );
 	const uint startPos = 16 * idx;
 	
@@ -148,10 +148,10 @@ __kernel void decrypt( __global const uchar rkey[240], __global const uchar *dat
 	for( uint i = 0; i < 16; i++) block[i] = data[startPos+i];
 	
 	// Add Round Key
-	for( uint i = 0; i < 16; i++ ) block[i] = block[i] ^ rkey[14*16+i];
+	for( uint i = 0; i < 16; i++ ) block[i] = block[i] ^ rkey[rounds*16+i];
 		
 	// Calculate Rounds
-	for( uint j = 13; j > 0; j-- ){
+	for( uint j = rounds - 1; j > 0; j-- ){
 		const uint jPos = j * 16;
 		
 		// Inverse Shift Rows

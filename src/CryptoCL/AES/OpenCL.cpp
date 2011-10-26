@@ -103,6 +103,7 @@ namespace CryptoCL {
 		
 		const DataArray OpenCL::CPUEncrypt( const DataArray& data ) {
 			DataArray aData( data.begin(), data.end() ), rKey = mKey.Value();
+			const unsigned int rCount = mKey.Rounds();
 			
 			Buffer RoundKey( *mContextCPU, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * rKey.size(), &rKey[0] );
 			Buffer Input( *mContextCPU, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * aData.size(), &aData[0] );
@@ -113,6 +114,7 @@ namespace CryptoCL {
 			bool paramSuccess = mEKernelCPU->Parameter( 0, RoundKey );
 			paramSuccess |= mEKernelCPU->Parameter( 1, Input );
 			paramSuccess |= mEKernelCPU->Parameter( 2, Result );
+			paramSuccess |= mEKernelCPU->Parameter( 3, sizeof( cl_int ), &rCount );
 			
 			if( !paramSuccess ) {
 				std::cerr << "Parameters Invalid" << std::endl;
@@ -132,6 +134,7 @@ namespace CryptoCL {
 		
 		const DataArray OpenCL::GPUEncrypt( const DataArray& data ) {
 			DataArray aData( data.begin(), data.end() ), rKey = mKey.Value();
+			const unsigned int rCount = mKey.Rounds();
 							
 			Buffer RoundKey( *mContextGPU, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * rKey.size(), &rKey[0] );
 			Buffer Input( *mContextGPU, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * aData.size(), &aData[0] );
@@ -142,6 +145,7 @@ namespace CryptoCL {
 			bool paramSuccess = mEKernelGPU->Parameter( 0, RoundKey );
 			paramSuccess |= mEKernelGPU->Parameter( 1, Input );
 			paramSuccess |= mEKernelGPU->Parameter( 2, Result );
+			paramSuccess |= mEKernelGPU->Parameter( 3, sizeof( cl_int ), &rCount );
 			
 			if( !paramSuccess ) {
 				std::cerr << "Parameters Invalid" << std::endl;
@@ -161,6 +165,7 @@ namespace CryptoCL {
 		
 		const DataArray OpenCL::CPUDecrypt( const DataArray& data ) {
 			DataArray aData( data.begin(), data.end() ), rKey = mKey.Value();
+			const unsigned int rCount = mKey.Rounds();
 				
 			Buffer RoundKey( *mContextCPU, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * rKey.size(), &rKey[0] );
 			Buffer Input( *mContextCPU, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * aData.size(), &aData[0] );
@@ -171,6 +176,7 @@ namespace CryptoCL {
 			bool paramSuccess = mDKernelCPU->Parameter( 0, RoundKey );
 			paramSuccess |= mDKernelCPU->Parameter( 1, Input );
 			paramSuccess |= mDKernelCPU->Parameter( 2, Result );
+			paramSuccess |= mDKernelCPU->Parameter( 3, sizeof( cl_int ), &rCount );
 			
 			if( !paramSuccess ) {
 				std::cerr << "Parameters Invalid" << std::endl;
@@ -190,6 +196,7 @@ namespace CryptoCL {
 		
 		const DataArray OpenCL::GPUDecrypt( const DataArray& data ) {
 			DataArray aData( data.begin(), data.end() ), rKey = mKey.Value();
+			const unsigned int rCount = mKey.Rounds();
 				
 			Buffer RoundKey( *mContextGPU, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * rKey.size(), &rKey[0] );
 			Buffer Input( *mContextGPU, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * aData.size(), &aData[0] );
@@ -200,6 +207,7 @@ namespace CryptoCL {
 			bool paramSuccess = mDKernelGPU->Parameter( 0, RoundKey );
 			paramSuccess |= mDKernelGPU->Parameter( 1, Input );
 			paramSuccess |= mDKernelGPU->Parameter( 2, Result );
+			paramSuccess |= mDKernelGPU->Parameter( 3, sizeof( cl_int ), &rCount );
 			
 			if( !paramSuccess ) {
 				std::cerr << "Parameters Invalid" << std::endl;
