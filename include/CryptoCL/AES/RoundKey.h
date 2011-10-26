@@ -26,7 +26,6 @@ namespace CryptoCL {
 				const DataArray Value() const;
 				const DataArray Value( const unsigned int i ) const;
 			private:
-				const DataArray Rotate( const DataArray& input );
 				const DataArray KeyScheduleCore( const DataArray& input, const unsigned int iteration );
 		};
 	}

@@ -82,26 +82,14 @@ namespace CryptoCL {
 			return std::vector<unsigned char>( mData.begin() + iPos, mData.begin() + iPos + 16 );
 		}
 		
-		const DataArray RoundKey::Rotate( const DataArray& input ){
-			DataArray retVal( 4 );
-			
-			retVal[0] = input[1];
-			retVal[1] = input[2];
-			retVal[2] = input[3];
-			retVal[3] = input[0];
-			
-			return retVal;
-		}
-
+		// Rotate array and substitute sbox values
 		const DataArray RoundKey::KeyScheduleCore( const DataArray& input, const unsigned int iteration ) {
-			DataArray output = Rotate( input );
+			DataArray output( 4 );
 			
-			output[0] = SBox[output[0]];
-			output[1] = SBox[output[1]];
-			output[2] = SBox[output[2]];
-			output[3] = SBox[output[3]];
-			
-			output[0] ^= Rcon[iteration];
+			output[0] = SBox[input[1]] ^ Rcon[iteration];
+			output[1] = SBox[input[2]];
+			output[2] = SBox[input[3]];
+			output[3] = SBox[input[0]];
 				
 			return output;
 		}
