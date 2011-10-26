@@ -20,7 +20,6 @@ namespace CryptoCL {
 			
 			// Save KeySize
 			mSize = static_cast<Key::KeySize>( keySize );
-			std::cout << (int)mSize << std::endl;
 			
 			// Calculate Round Key Size 
 			const unsigned int roundKeySize = 16 * ( Rounds() + 1 );
@@ -28,26 +27,92 @@ namespace CryptoCL {
 			// First Round
 			mData.clear();
 			mData.insert( mData.end(), key.begin(), key.end() );
-			
+	
+			// Until we have b bytes of expanded key, we do the following to generate n more bytes of expanded key:
 			unsigned int rConIteration = 1;
 			while( mData.size() < roundKeySize ){
-				const unsigned int eSize = mData.size();
+				const unsigned int prevStart = (int)mSize;
+				const unsigned int prevEnd = (int)mSize - 4;
 				
+				// We do the following to create 4 bytes of expanded key
+				
+				// We create a 4-byte temporary variable, t
+				// We assign the value of the previous four bytes in the expanded key to t
 				DataArray RoundKey( mData.end() - 4, mData.end() );
-				const DataArray PreviousKey( mData.end() - 32, mData.end() - 28 );
+				DataArray PreviousKey( mData.end() - prevStart, mData.end() - prevEnd );
 				
-				/* Complex Calculation */
-				if( eSize % (int)mSize == 0 ) RoundKey = KeyScheduleCore( RoundKey, rConIteration++ );
+				// We perform the key schedule core (see above) on t, with i as the rcon iteration value
+				// We increment i by 1
+				RoundKey = KeyScheduleCore( RoundKey, rConIteration++ );
 				
-				/* Extra SBox */
-				//if( mSize == Key::Bit256 && eSize % 32 == 16 ) for(int a = 0; a < 4; a++) RoundKey[a] = SBox[RoundKey[a]];
-				
-				/* Xor Result */
+				// We exclusive-or t with the four-byte block n bytes before the new expanded key.
 				for(int a = 0; a < 4; a++) RoundKey[a] ^= PreviousKey[a];
 				
-				/* Store Data */
+				//This becomes the next 4 bytes in the expanded key
 				mData.insert( mData.end(), RoundKey.begin(), RoundKey.end() );
+				
+				// We then do the following three times to create the next twelve bytes of expanded key:
+				for( unsigned int i = 0; i < 3; i++){
+					// We assign the value of the previous 4 bytes in the expanded key to t
+					RoundKey = DataArray( mData.end() - 4, mData.end() );
+					
+					// We exclusive-or t with the four-byte block n bytes before the new expanded key.
+					PreviousKey = DataArray( mData.end() - prevStart, mData.end() - prevEnd );
+					for(int a = 0; a < 4; a++) RoundKey[a] ^= PreviousKey[a];
+					
+					//This becomes the next 4 bytes in the expanded key
+					mData.insert( mData.end(), RoundKey.begin(), RoundKey.end() );
+				}
+				
+				// If we are generating a 256-bit key, we do the following to generate the next 4 bytes of expanded key:
+				if( mSize == Key::Bit256 ){
+				
+					//We assign the value of the previous 4 bytes in the expanded key to t
+					RoundKey = DataArray( mData.end() - 4, mData.end() );
+					
+					//We run each of the 4 bytes in t through Rijndael's S-box
+					for(int a = 0; a < 4; a++) RoundKey[a] = SBox[RoundKey[a]];
+					
+					//We exclusive-or t with the 4-byte block n bytes before the new expanded key.
+					PreviousKey = DataArray( mData.end() - prevStart, mData.end() - prevEnd );
+					for(int a = 0; a < 4; a++) RoundKey[a] ^= PreviousKey[a];
+					
+					//This becomes the next 4 bytes in the expanded key.
+					mData.insert( mData.end(), RoundKey.begin(), RoundKey.end() );
+				}
+				
+				// If we are generating a 192-bit key, we run the following steps twice. 
+				if( mSize == Key::Bit192 ){
+					for( unsigned int i = 0; i < 2; i ++ ){
+						// We assign the value of the previous 4 bytes in the expanded key to t
+						RoundKey = DataArray( mData.end() - 4, mData.end() );
+						
+						// We exclusive-or t with the four-byte block n bytes before the new expanded key. 
+						PreviousKey = DataArray( mData.end() - prevStart, mData.end() - prevEnd );
+						for(int a = 0; a < 4; a++) RoundKey[a] ^= PreviousKey[a];
+						
+						//This becomes the next 4 bytes in the expanded key.
+						mData.insert( mData.end(), RoundKey.begin(), RoundKey.end() );
+					}				
+				}
+				
+				// If we are generating a 256-bit key, we run the following steps three times:
+				if( mSize == Key::Bit256 ){
+					for( unsigned int i = 0; i < 3; i ++ ){
+						// We assign the value of the previous 4 bytes in the expanded key to t
+						RoundKey = DataArray( mData.end() - 4, mData.end() );
+						
+						// We exclusive-or t with the four-byte block n bytes before the new expanded key. 
+						PreviousKey = DataArray( mData.end() - prevStart, mData.end() - prevEnd );
+						for(int a = 0; a < 4; a++) RoundKey[a] ^= PreviousKey[a];
+						
+						//This becomes the next 4 bytes in the expanded key.
+						mData.insert( mData.end(), RoundKey.begin(), RoundKey.end() );
+					}				
+				}
 			}
+			
+			if( mData.size() > roundKeySize ) mData.resize( roundKeySize );
 		}
 		
 		unsigned int RoundKey::Rounds() const {

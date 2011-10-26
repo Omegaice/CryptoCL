@@ -1,5 +1,6 @@
 #include "AES/RoundKeyTest.h"
 
+#include <iomanip>
 #include <sstream>
 #include <iostream>
 
