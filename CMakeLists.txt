@@ -28,16 +28,19 @@ if( TQDLIB_DIR )
 endif( TQDLIB_DIR )
 
 # Header Files
-file( GLOB BASE_HEADERS include/*.h )
+file( GLOB BASE_HEADERS include/CryptoCL/*.h )
 source_group( "include" FILES ${BASE_HEADERS} )
-file( GLOB AES_HEADERS include/CryptoCL/AES/*.h )
-source_group( "include\\CryptoCL\\AES" FILES ${AES_HEADERS} )
+file( GLOB BLOCK_HEADERS include/CryptoCL/Block/*.h )
+source_group( "include\\CryptoCL\\Block" FILES ${BLOCK_HEADERS} )
+file( GLOB BLOCK_AES_HEADERS include/CryptoCL/Block/AES/*.h )
+source_group( "include\\CryptoCL\\Block\\AES" FILES ${BLOCK_AES_HEADERS} )
 
 list( APPEND PROJECT_HEADERS ${BASE_HEADERS} )
-list( APPEND PROJECT_HEADERS ${AES_HEADERS} )
+list( APPEND PROJECT_HEADERS ${BLOCK_HEADERS} )
+list( APPEND PROJECT_HEADERS ${BLOCK_AES_HEADERS} )
 
 if( NOT BUILD_OPENCL )
-	list( REMOVE_ITEM PROJECT_HEADERS "${CMAKE_SOURCE_DIR}/include/CryptoCL/AES/OpenCL.h" )
+	list( REMOVE_ITEM PROJECT_HEADERS "${CMAKE_SOURCE_DIR}/include/CryptoCL/Block/AES/OpenCL.h" )
 endif( NOT BUILD_OPENCL )
 
 # Source Files
@@ -46,11 +49,19 @@ source_group( "src" FILES ${BASE_SOURCES} )
 file( GLOB AES_SOURCES src/CryptoCL/AES/*.cpp )
 source_group( "src\\CryptoCL\\AES" FILES ${AES_SOURCES} )
 
+file( GLOB BASE_SOURCES src/CryptoCL/*.cpp )
+source_group( "src" FILES ${BASE_SOURCES} )
+file( GLOB BLOCK_SOURCES src/CryptoCL/Block/*.cpp )
+source_group( "src\\CryptoCL\\Block" FILES ${BLOCK_SOURCES} )
+file( GLOB BLOCK_AES_SOURCES src/CryptoCL/Block/AES/*.cpp )
+source_group( "src\\CryptoCL\\Block\\AES" FILES ${BLOCK_AES_SOURCES} )
+
 list( APPEND PROJECT_SOURCES ${BASE_SOURCES} )
-list( APPEND PROJECT_SOURCES ${AES_SOURCES} )
+list( APPEND PROJECT_SOURCES ${BLOCK_SOURCES} )
+list( APPEND PROJECT_SOURCES ${BLOCK_AES_SOURCES} )
 
 if( NOT BUILD_OPENCL )
-	list( REMOVE_ITEM PROJECT_SOURCES "${CMAKE_SOURCE_DIR}/src/CryptoCL/AES/OpenCL.cpp" )
+	list( REMOVE_ITEM PROJECT_SOURCES "${CMAKE_SOURCE_DIR}/src/CryptoCL/Block/AES/OpenCL.cpp" )
 endif( NOT BUILD_OPENCL )
 
 # Data Files

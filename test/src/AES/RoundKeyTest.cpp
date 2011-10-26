@@ -4,13 +4,14 @@
 #include <sstream>
 #include <iostream>
 
-#include <CryptoCL/AES/RoundKey.h>
+#include <CryptoCL/Block/AES/RoundKey.h>
 #include <cppunit/extensions/HelperMacros.h>
 
 CPPUNIT_TEST_SUITE_REGISTRATION( AES::RoundKeyTest );
 
 namespace AES {
-	using namespace CryptoCL::AES;
+	using namespace CryptoCL;
+	using namespace CryptoCL::Block::AES;
 	
 	// 128 Bit Tests
 	void RoundKeyTest::testBitSize128() {
@@ -18,7 +19,7 @@ namespace AES {
 			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
 		};
 		
-		const RoundKey rKey( std::vector<unsigned char>( key, key + 16 ) );
+		const RoundKey rKey( DataArray( key, key + 16 ) );
 		
 		CPPUNIT_ASSERT_EQUAL( (int)Key::Bit128, (int)rKey.Size() );
 	}
@@ -28,7 +29,7 @@ namespace AES {
 			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
 		};
 		
-		const RoundKey rKey( std::vector<unsigned char>( key, key + 16 ) );
+		const RoundKey rKey( DataArray( key, key + 16 ) );
 		
 		CPPUNIT_ASSERT_EQUAL( (int)10, (int)rKey.Rounds() );
 	}
@@ -52,8 +53,8 @@ namespace AES {
 			0x13,0x11,0x1d,0x7f,0xe3,0x94,0x4a,0x17,0xf3,0x07,0xa7,0x8b,0x4d,0x2b,0x30,0xc5
 		};
 		
-		const RoundKey rKey( std::vector<unsigned char>( key, key + 16 ) );
-		const std::vector<unsigned char> result = rKey.Value();
+		const RoundKey rKey( DataArray( key, key + 16 ) );
+		const DataArray result = rKey.Value();
 		
 		const unsigned int keySize = result.size();
 		CPPUNIT_ASSERT_EQUAL( 176, (int)keySize );
@@ -75,8 +76,8 @@ namespace AES {
 			0x47,0xf7,0xf7,0xbc,0x95,0x35,0x3e,0x03,0xf9,0x6c,0x32,0xbc,0xfd,0x05,0x8d,0xfd
 		};
 		
-		const RoundKey rKey( std::vector<unsigned char>( key, key + 16 ) );
-		const std::vector<unsigned char> result = rKey.Value( 4 );
+		const RoundKey rKey( DataArray( key, key + 16 ) );
+		const DataArray result = rKey.Value( 4 );
 		
 		const unsigned int keySize = result.size();
 		CPPUNIT_ASSERT_EQUAL( 16, (int)keySize );
@@ -96,7 +97,7 @@ namespace AES {
 			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17
 		};
 		
-		const RoundKey rKey( std::vector<unsigned char>( key, key + 24 ) );
+		const RoundKey rKey( DataArray( key, key + 24 ) );
 		
 		CPPUNIT_ASSERT_EQUAL( (int)Key::Bit192, (int)rKey.Size() );
 	}
@@ -107,7 +108,7 @@ namespace AES {
 			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17 
 		};
 		
-		const RoundKey rKey( std::vector<unsigned char>( key, key + 24 ) );
+		const RoundKey rKey( DataArray( key, key + 24 ) );
 		
 		CPPUNIT_ASSERT_EQUAL( (int)12, (int)rKey.Rounds() );
 	}
@@ -134,8 +135,8 @@ namespace AES {
 			0xa4,0x97,0x0a,0x33,0x1a,0x78,0xdc,0x09,0xc4,0x18,0xc2,0x71,0xe3,0xa4,0x1d,0x5d
 		};
 		
-		const RoundKey rKey( std::vector<unsigned char>( key, key + 24 ) );
-		const std::vector<unsigned char> result = rKey.Value();
+		const RoundKey rKey( DataArray( key, key + 24 ) );
+		const DataArray result = rKey.Value();
 		
 		const unsigned int keySize = result.size();
 		CPPUNIT_ASSERT_EQUAL( 208, (int)keySize );
@@ -158,8 +159,8 @@ namespace AES {
 			0x58,0xe1,0x51,0xab,0x04,0xa2,0xa5,0x55,0x7e,0xff,0xb5,0x41,0x62,0x45,0x08,0x0c
 		};
 		
-		const RoundKey rKey( std::vector<unsigned char>( key, key + 24 ) );
-		const std::vector<unsigned char> result = rKey.Value( 4 );
+		const RoundKey rKey( DataArray( key, key + 24 ) );
+		const DataArray result = rKey.Value( 4 );
 		
 		const unsigned int keySize = result.size();
 		CPPUNIT_ASSERT_EQUAL( 16, (int)keySize );
@@ -179,7 +180,7 @@ namespace AES {
 			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f 
 		};
 		
-		const RoundKey rKey( std::vector<unsigned char>( key, key + 32 ) );
+		const RoundKey rKey( DataArray( key, key + 32 ) );
 		
 		CPPUNIT_ASSERT_EQUAL( (int)Key::Bit256, (int)rKey.Size() );
 	}
@@ -191,7 +192,7 @@ namespace AES {
 			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f 
 		};
 		
-		const RoundKey rKey( std::vector<unsigned char>( key, key + 32 ) );
+		const RoundKey rKey( DataArray( key, key + 32 ) );
 		
 		CPPUNIT_ASSERT_EQUAL( (int)14, (int)rKey.Rounds() );
 	}
@@ -220,8 +221,8 @@ namespace AES {
 			0x24, 0xfc, 0x79, 0xcc, 0xbf, 0x09, 0x79, 0xe9, 0x37, 0x1a, 0xc2, 0x3c, 0x6d, 0x68, 0xde, 0x36
 		};
 		
-		const RoundKey rKey( std::vector<unsigned char>( key, key + 32 ) );
-		const std::vector<unsigned char> result = rKey.Value();
+		const RoundKey rKey( DataArray( key, key + 32 ) );
+		const DataArray result = rKey.Value();
 		
 		const unsigned int keySize = result.size();
 		CPPUNIT_ASSERT_EQUAL( 240, (int)keySize );
@@ -244,8 +245,8 @@ namespace AES {
 			0xae, 0x87, 0xdf, 0xf0, 0x0f, 0xf1, 0x1b, 0x68, 0xa6, 0x8e, 0xd5, 0xfb, 0x03, 0xfc, 0x15, 0x67
 		};
 		
-		const RoundKey rKey( std::vector<unsigned char>( key, key + 32 ) );
-		const std::vector<unsigned char> result = rKey.Value( 4 );
+		const RoundKey rKey( DataArray( key, key + 32 ) );
+		const DataArray result = rKey.Value( 4 );
 		
 		const unsigned int keySize = result.size();
 		CPPUNIT_ASSERT_EQUAL( 16, (int)keySize );

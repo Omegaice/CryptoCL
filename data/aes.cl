@@ -82,7 +82,7 @@ __kernel void encrypt( __global const uchar *rkey, __global const uchar *data, _
 	for( uint i = 0; i < 16; i++) block[i] = block[i] ^ rkey[i];
 	
 	/* Calculate Rounds */
-	for( uint j = 1; j < 14; j++ ){
+	for( uint j = 1; j < rounds; j++ ){
 		const uint jPos = j * 16;
 		
 		/* Sub Bytes */
