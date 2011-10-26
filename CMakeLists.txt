@@ -22,22 +22,18 @@ endif( TQDLIB_DIR )
 # Header Files
 file( GLOB BASE_HEADERS include/*.h )
 source_group( "include" FILES ${BASE_HEADERS} )
-file( GLOB AES_HEADERS include/AES/*.h )
-source_group( "include\\AES" FILES ${AES_HEADERS} )
-file( GLOB RSA_HEADERS include/RSA/*.h )
-source_group( "include\\RSA" FILES ${RSA_HEADERS} )
+file( GLOB AES_HEADERS include/CryptoCL/AES/*.h )
+source_group( "include\\CryptoCL\\AES" FILES ${AES_HEADERS} )
 
-set( PROJECT_HEADERS ${BASE_HEADERS} ${AES_HEADERS} ${RSA_HEADERS} )
+set( PROJECT_HEADERS ${BASE_HEADERS} ${AES_HEADERS} )
 
 # Source Files
 file( GLOB BASE_SOURCES src/*.cpp )
 source_group( "src" FILES ${BASE_SOURCES} )
-file( GLOB AES_SOURCES src/AES/*.cpp )
-source_group( "src\\AES" FILES ${AES_SOURCES} )
-file( GLOB RSA_SOURCES src/RSA/*.cpp )
-source_group( "src\\RSA" FILES ${RSA_SOURCES} )
+file( GLOB AES_SOURCES src/CryptoCL/AES/*.cpp )
+source_group( "src\\CryptoCL\\AES" FILES ${AES_SOURCES} )
 
-set( PROJECT_SOURCES ${BASE_SOURCES} ${AES_SOURCES} ${RSA_SOURCES} )
+set( PROJECT_SOURCES ${BASE_SOURCES} ${AES_SOURCES} )
 
 # Data Files
 file( GLOB BASE_DATA data/*.cl )
@@ -76,7 +72,7 @@ if( BUILD_TESTING )
 endif( BUILD_TESTING )
 
 # Installation
-install( DIRECTORY "include/TQD/Physics/" DESTINATION "include/TQD/Physics/" PATTERN ".svn" EXCLUDE PATTERN "*.h" )
+install( DIRECTORY "include/" DESTINATION "include/" PATTERN ".svn" EXCLUDE PATTERN "*.h" )
 install( TARGETS cryptocl RUNTIME DESTINATION "bin" LIBRARY DESTINATION "lib" ARCHIVE DESTINATION "lib" )
 
 if( BUILD_SHARED )

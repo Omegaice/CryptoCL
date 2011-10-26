@@ -1,17 +1,21 @@
 #include "AES/ReferenceTest.h"
+
+#include <CryptoCL/AES/RoundKey.h>
+#include <CryptoCL/AES/Reference.h>
 #include <cppunit/extensions/HelperMacros.h>
 
 CPPUNIT_TEST_SUITE_REGISTRATION( AES::ReferenceTest );
 
 namespace AES {
+	using namespace CryptoCL::AES;
+	
 	void ReferenceTest::testRoundKeyGeneration() {
 	
 	}
 	
 	void ReferenceTest::testEncryption128() {
 		const unsigned char key[] = { 
-			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
-			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f 
+			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
 		};
 		
 		const unsigned char data[] = { 
@@ -22,10 +26,9 @@ namespace AES {
 			0x69,0xc4,0xe0,0xd8,0x6a,0x7b,0x04,0x30,0xd8,0xcd,0xb7,0x80,0x70,0xb4,0xc5,0x5a
 		};
 		
-		AES::Reference cipher;
-		cipher.Initialise( AES::CharArray( key, key + 32 ) );
+		Reference cipher( RoundKey( DataArray( key, key + 16 ) ) );
 		
-		const AES::CharArray result = cipher.Encrypt( AES::CharArray( data, data + 16 ) );
+		const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ) );
 		
 		const unsigned int size = result.size();
 		for( unsigned int i = 0; i < size; i++ ){
@@ -36,7 +39,7 @@ namespace AES {
 	void ReferenceTest::testEncryption192() {
 		const unsigned char key[] = { 
 			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
-			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f 
+			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17
 		};
 		
 		const unsigned char data[] = { 
@@ -47,10 +50,9 @@ namespace AES {
 			0xdd,0xa9,0x7c,0xa4,0x86,0x4c,0xdf,0xe0,0x6e,0xaf,0x70,0xa0,0xec,0x0d,0x71,0x91 
 		};
 		
-		AES::Reference cipher;
-		cipher.Initialise( AES::CharArray( key, key + 32 ) );
+		Reference cipher( RoundKey( DataArray( key, key + 24 ) ) );
 		
-		const AES::CharArray result = cipher.Encrypt( AES::CharArray( data, data + 16 ) );
+		const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ) );
 		
 		const unsigned int size = result.size();
 		for( unsigned int i = 0; i < size; i++ ){
@@ -72,10 +74,9 @@ namespace AES {
 			0x8e,0xa2,0xb7,0xca,0x51,0x67,0x45,0xbf,0xea,0xfc,0x49,0x90,0x4b,0x49,0x60,0x89 
 		};
 		
-		AES::Reference cipher;
-		cipher.Initialise( AES::CharArray( key, key + 32 ) );
+		Reference cipher( RoundKey( DataArray( key, key + 32 ) ) );
 		
-		const AES::CharArray result = cipher.Encrypt( AES::CharArray( data, data + 16 ) );
+		const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ) );
 		
 		const unsigned int size = result.size();
 		for( unsigned int i = 0; i < size; i++ ){
@@ -96,10 +97,9 @@ namespace AES {
 			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
 		};
 		
-		AES::Reference cipher;
-		cipher.Initialise( AES::CharArray( key, key + 16 ) );
+		Reference cipher( RoundKey( DataArray( key, key + 16 ) ) );
 		
-		const AES::CharArray result = cipher.Decrypt( AES::CharArray( data, data + 16 ) );
+		const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
 		
 		const unsigned int size = result.size();
 		for( unsigned int i = 0; i < size; i++ ){
@@ -121,10 +121,9 @@ namespace AES {
 			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
 		};
 		
-		AES::Reference cipher;
-		cipher.Initialise( AES::CharArray( key, key + 24 ) );
+		Reference cipher( RoundKey( DataArray( key, key + 24 ) ) );
 		
-		const AES::CharArray result = cipher.Decrypt( AES::CharArray( data, data + 16 ) );
+		const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
 		
 		const unsigned int size = result.size();
 		for( unsigned int i = 0; i < size; i++ ){
@@ -146,10 +145,9 @@ namespace AES {
 			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
 		};
 		
-		AES::Reference cipher;
-		cipher.Initialise( AES::CharArray( key, key + 32 ) );
+		Reference cipher( RoundKey( DataArray( key, key + 32 ) ) );
 		
-		const AES::CharArray result = cipher.Decrypt( AES::CharArray( data, data + 16 ) );
+		const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
 		
 		const unsigned int size = result.size();
 		for( unsigned int i = 0; i < size; i++ ){

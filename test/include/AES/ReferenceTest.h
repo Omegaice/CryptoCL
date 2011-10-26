@@ -1,7 +1,6 @@
 #ifndef CRYPTOCL_TEST_AES_REFERENCE_H_
 #define CRYPTOCL_TEST_AES_REFERENCE_H_
 
-#include <AES/Reference.h>
 #include <cppunit/extensions/HelperMacros.h>
 
 namespace AES {
