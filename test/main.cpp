@@ -1,29 +1,35 @@
-#include <fstream>
-#include <cppunit/TestResult.h>
 #include <cppunit/XmlOutputter.h>
-#include <cppunit/ui/text/TestRunner.h>
-#include <cppunit/TestResultCollector.h>
+#include <cppunit/CompilerOutputter.h>
 #include <cppunit/extensions/TestFactoryRegistry.h>
+#include <cppunit/TestResult.h>
+#include <cppunit/TestResultCollector.h>
+#include <cppunit/TestRunner.h>
+#include <cppunit/BriefTestProgressListener.h>
 
-int main( int argc, char **argv)
+int main (int argc, char* argv[])
 {
-	CppUnit::TextUi::TestRunner runner;
-	CppUnit::TestResultCollector  collector;
-	CppUnit::TestResult result;
-	result.addListener(&collector);
+    // informs test-listener about testresults
+    CppUnit::TestResult testresult;
 
-	CppUnit::TestFactoryRegistry &registry = CppUnit::TestFactoryRegistry::getRegistry();
-	runner.addTest(registry.makeTest());
+    // register listener for collecting the test-results
+    CppUnit::TestResultCollector collectedresults;
+    testresult.addListener (&collectedresults);
 
-	// Run the tests.
-	runner.run(result);
+    // insert test-suite at test-runner by registry
+    CppUnit::TestRunner testrunner;
+    testrunner.addTest (CppUnit::TestFactoryRegistry :: getRegistry ().makeTest ());
+    testrunner.run (testresult);
 
-
+    // output results in compiler-format
+    CppUnit::CompilerOutputter compileroutputter (&collectedresults, std::cerr);
+    compileroutputter.write ();
+	
 	// writing result on a XML file
 	std::ofstream xmlFileOut("testresults.xml");
-	CppUnit::XmlOutputter xmlOut(&collector, xmlFileOut);
+	CppUnit::XmlOutputter xmlOut(&collectedresults, xmlFileOut);
 	xmlOut.write();
-	
-	// Return error code 1 if the one of test failed.
-	return 0;
+
+    // return 0 if tests were successful
+    return collectedresults.wasSuccessful () ? 0 : 1;
 }
+	
