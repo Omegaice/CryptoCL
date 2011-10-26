@@ -12,11 +12,14 @@ if( TQDLIB_DIR )
 	# Add directory to compile paths
 	include_directories( "${TQDLIB_DIR}/include/" )
 
-	find_library( TQD_OPENCL "tqdlib-compute-opencl-s" HINT "${TQDLIB_DIR}/lib/" )
-	find_library( OPENCL_LIB "OpenCL" )
+	option( BUILD_OPENCL "Build with OpenCL" Off )
+	if( BUILD_OPENCL )
+		find_library( TQD_OPENCL "tqdlib-compute-opencl-s" HINT "${TQDLIB_DIR}/lib/" )
+		find_library( OPENCL_LIB "OpenCL" )
 
-	list( APPEND LIB_GENERAL "${TQD_OPENCL}" )
-	list( APPEND LIB_GENERAL "${OPENCL_LIB}" )
+		list( APPEND LIB_GENERAL "${TQD_OPENCL}" )
+		list( APPEND LIB_GENERAL "${OPENCL_LIB}" )
+	endif( BUILD_OPENCL )
 endif( TQDLIB_DIR )
 
 # Header Files
@@ -25,7 +28,12 @@ source_group( "include" FILES ${BASE_HEADERS} )
 file( GLOB AES_HEADERS include/CryptoCL/AES/*.h )
 source_group( "include\\CryptoCL\\AES" FILES ${AES_HEADERS} )
 
-set( PROJECT_HEADERS ${BASE_HEADERS} ${AES_HEADERS} )
+list( APPEND PROJECT_HEADERS ${BASE_HEADERS} )
+list( APPEND PROJECT_HEADERS ${AES_HEADERS} )
+
+if( NOT BUILD_OPENCL )
+	list( REMOVE_ITEM PROJECT_HEADERS "${CMAKE_SOURCE_DIR}/include/CryptoCL/AES/OpenCL.h" )
+endif( NOT BUILD_OPENCL )
 
 # Source Files
 file( GLOB BASE_SOURCES src/*.cpp )
@@ -33,7 +41,12 @@ source_group( "src" FILES ${BASE_SOURCES} )
 file( GLOB AES_SOURCES src/CryptoCL/AES/*.cpp )
 source_group( "src\\CryptoCL\\AES" FILES ${AES_SOURCES} )
 
-set( PROJECT_SOURCES ${BASE_SOURCES} ${AES_SOURCES} )
+list( APPEND PROJECT_SOURCES ${BASE_SOURCES} )
+list( APPEND PROJECT_SOURCES ${AES_SOURCES} )
+
+if( NOT BUILD_OPENCL )
+	list( REMOVE_ITEM PROJECT_SOURCES "${CMAKE_SOURCE_DIR}/src/CryptoCL/AES/OpenCL.cpp" )
+endif( NOT BUILD_OPENCL )
 
 # Data Files
 file( GLOB BASE_DATA data/*.cl )
