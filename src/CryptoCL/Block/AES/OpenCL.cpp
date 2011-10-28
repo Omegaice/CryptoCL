@@ -171,13 +171,6 @@ namespace CryptoCL {
 						DataArray previous;
 						previous.insert( previous.end(), mInitialisationVector.begin(), mInitialisationVector.end() );
 						previous.insert( previous.end(), aData.begin(), aData.end() - 16 );
-						
-						std::cout << "Previous: " << std::dec << (int)previous.size() << std::endl;
-						for( unsigned int i = 0 ; i < previous.size(); i++ ){
-							std::cout << std::hex << std::setw( 2 ) << std::setfill('0') << (int) previous[i] << " ";;
-							if( (i + 1) % 16 == 0 ) std::cout << std::endl;
-						}
-						std::cout << std::endl;
 							
 						Buffer RoundKey( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * rKey.size(), &rKey[0] );
 						Buffer Input( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * aData.size(), &aData[0] );

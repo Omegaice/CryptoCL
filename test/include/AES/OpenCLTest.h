@@ -15,18 +15,23 @@ namespace AES {
 				CPPUNIT_TEST( testDecryptionCBC128GPU );
 				CPPUNIT_TEST( testEncryption192CPU );
 				CPPUNIT_TEST( testDecryption192CPU );
+				CPPUNIT_TEST( testDecryptionCBC192CPU );
 				CPPUNIT_TEST( testEncryption192GPU );
 				CPPUNIT_TEST( testDecryption192GPU );
+				CPPUNIT_TEST( testDecryptionCBC192GPU );
 				CPPUNIT_TEST( testEncryption256CPU );
 				CPPUNIT_TEST( testDecryption256CPU );
+				CPPUNIT_TEST( testDecryptionCBC256CPU );
 				CPPUNIT_TEST( testEncryption256GPU );
 				CPPUNIT_TEST( testDecryption256GPU );
+				CPPUNIT_TEST( testDecryptionCBC256GPU );
 			CPPUNIT_TEST_SUITE_END();
 		public:
 			// 128 Bit Tests
 			void testEncryption128CPU();
 			void testDecryption128CPU();
 			void testDecryptionCBC128CPU();
+			
 			void testEncryption128GPU();
 			void testDecryption128GPU();
 			void testDecryptionCBC128GPU();
@@ -34,14 +39,20 @@ namespace AES {
 			// 192 Bit Tests
 			void testEncryption192CPU();
 			void testDecryption192CPU();
+			void testDecryptionCBC192CPU();
+			
 			void testEncryption192GPU();
 			void testDecryption192GPU();
+			void testDecryptionCBC192GPU();
 			
 			// 256 Bit Tests
 			void testEncryption256CPU();
 			void testDecryption256CPU();
+			void testDecryptionCBC256CPU();
+			
 			void testEncryption256GPU();
 			void testDecryption256GPU();
+			void testDecryptionCBC256GPU();
 	};
 
 }

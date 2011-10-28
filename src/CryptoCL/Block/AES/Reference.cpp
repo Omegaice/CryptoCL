@@ -21,19 +21,12 @@ namespace CryptoCL {
 					mState.clear();
 					mState.insert( mState.end(), lData.begin() + sPos, lData.begin() + sPos + 16 );
 					
-					switch( mMode ) {
-						case Mode::ElectronicCookBook:
-							break;
-						case Mode::CipherBlockChaining:
-							break;
-						case Mode::PropagatingCipherBlockChaining:
-							break;
-						case Mode::CipherFeedback:
-							break;
-						case Mode::OutputFeedback:
-							break;
-						case Mode::Counter:
-							break;
+					if( mMode == Mode::CipherBlockChaining ) {
+						if( i == 0 ) {
+							for(unsigned int s = 0; s < 16; s++ ) mState[s] ^= mInitialisationVector[s];
+						}else{
+							for(unsigned int s = 0; s < 16; s++ ) mState[s] ^= result[sPos-16+s];
+						}
 					}
 					
 					AddRoundKey( 0 );
@@ -78,6 +71,14 @@ namespace CryptoCL {
 					InvShiftRows();
 					AddRoundKey( 0 );
 
+					if( mMode == Mode::CipherBlockChaining ) {
+						if( i == 0 ) {
+							for(unsigned int s = 0; s < 16; s++ ) mState[s] ^= mInitialisationVector[s];
+						}else{
+							for(unsigned int s = 0; s < 16; s++ ) mState[s] ^= result[sPos-16+s];
+						}
+					}
+					
 					result.insert( result.end(), mState.begin(), mState.end() );
 				}
 				
