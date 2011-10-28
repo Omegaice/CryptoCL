@@ -7,6 +7,10 @@ namespace CryptoCL {
 	namespace Block {
 		namespace AES {
 			/* Public Functions */
+			Reference::Reference( const Mode::BlockMode mode, const DataArray& iv ) : AESBlockCipher( mode, iv ) {
+			
+			}
+			
 			const DataArray Reference::Encrypt( const DataArray& data ) {
 				DataArray result, lData( data.begin(), data.end() );
 				
@@ -16,6 +20,21 @@ namespace CryptoCL {
 					
 					mState.clear();
 					mState.insert( mState.end(), lData.begin() + sPos, lData.begin() + sPos + 16 );
+					
+					switch( mMode ) {
+						case Mode::ElectronicCookBook:
+							break;
+						case Mode::CipherBlockChaining:
+							break;
+						case Mode::PropagatingCipherBlockChaining:
+							break;
+						case Mode::CipherFeedback:
+							break;
+						case Mode::OutputFeedback:
+							break;
+						case Mode::Counter:
+							break;
+					}
 					
 					AddRoundKey( 0 );
 					
@@ -176,6 +195,61 @@ namespace CryptoCL {
 					mState[col * 4 + 2] = result[2];
 					mState[col * 4 + 3] = result[3];
 				}
+			}
+			
+			/* Block Modes */
+			void Reference::ModeECB( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded) {
+			
+			}
+			
+			void Reference::ModeCBC( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded ) {
+				if( round == 0 ){
+					unsigned int stateSize = mState.size();
+					for( unsigned int i = 0; i < stateSize; i++ ){
+						mState[i] ^= mInitialisationVector[i];
+					}
+				}else{
+					unsigned int stateSize = mState.size();
+					for( unsigned int i = 0; i < stateSize; i++ ){
+						mState[i] ^= PreviousEncoded[i];
+					}
+				}
+			}
+			
+			void Reference::ModePCBC( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded ) {
+				if( round == 0 ){
+					unsigned int stateSize = mState.size();
+					for( unsigned int i = 0; i < stateSize; i++ ){
+						mState[i] ^= mInitialisationVector[i];
+					}
+				}else{
+					unsigned int stateSize = mState.size();
+					for( unsigned int i = 0; i < stateSize; i++ ){
+						mState[i] ^= ( PreviousPlain[i] ^ PreviousEncoded[i] );
+					}
+				}
+			}
+			
+			void Reference::ModeCFB( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded ) {
+				if( round == 0 ){
+					unsigned int stateSize = mState.size();
+					for( unsigned int i = 0; i < stateSize; i++ ){
+						mState[i] ^= mInitialisationVector[i];
+					}
+				}else{
+					unsigned int stateSize = mState.size();
+					for( unsigned int i = 0; i < stateSize; i++ ){
+						mState[i] ^= ( PreviousPlain[i] ^ PreviousEncoded[i] );
+					}
+				}
+			}
+			
+			void Reference::ModeOFB( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded ) {
+			
+			}
+			
+			void Reference::ModeCRT( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded ) {
+			
 			}
 		}
 	}

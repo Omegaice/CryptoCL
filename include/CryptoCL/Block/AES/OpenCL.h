@@ -2,7 +2,7 @@
 #define CRYPTOCL_AES_OPENCL_H_
 
 #include <exception>
-#include "CryptoCL/Block/AES/Base.h"
+#include "CryptoCL/Block/AES/AESBlockCipher.h"
 
 namespace tqd{
 	namespace Compute{
@@ -19,17 +19,17 @@ namespace tqd{
 namespace CryptoCL {
 	namespace Block {
 		namespace AES {
-			class OpenCL : public Base {
+			class OpenCL : public AESBlockCipher {
 				public:
 					enum EDevice { CPU, GPU };
 				protected:
 					EDevice mDevice;
 					tqd::Compute::OpenCL::Queue *mQueue;
-					tqd::Compute::OpenCL::Kernel *mKernelE, *mKernelD;
+					tqd::Compute::OpenCL::Kernel *mKernelE, *mKernelD, *mKernelCBCD;
 					tqd::Compute::OpenCL::Context *mContext;
 					tqd::Compute::OpenCL::PlatformManager *mPlatformManager;
 				public:
-					OpenCL( const EDevice device );
+					OpenCL( const EDevice device, const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
 					~OpenCL();
 					
 					const DataArray Encrypt( const DataArray& data );

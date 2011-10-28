@@ -1,5 +1,7 @@
 #include "AES/OpenCLTest.h"
 
+#include <iomanip>
+#include <iostream>
 #include <CryptoCL/Block/AES/RoundKey.h>
 #include <CryptoCL/Block/AES/OpenCL.h>
 #include <cppunit/extensions/HelperMacros.h>
@@ -11,7 +13,7 @@ namespace AES {
 	using namespace CryptoCL::Block::AES;
 	
 	// 128 Bit Tests
-	void OpenCLTest::testEncryption128() {
+	void OpenCLTest::testEncryption128CPU() {
 		const unsigned char key[] = { 
 			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
 		};
@@ -24,20 +26,25 @@ namespace AES {
 			0x69,0xc4,0xe0,0xd8,0x6a,0x7b,0x04,0x30,0xd8,0xcd,0xb7,0x80,0x70,0xb4,0xc5,0x5a
 		};
 		
-		const RoundKey rKey( DataArray( key, key + 16 ) );
+		try{
+			OpenCL cipher( OpenCL::CPU );
+			cipher.Initialise( RoundKey( DataArray( key, key + 16 ) ) );
+			
+			const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
 		
-		OpenCL cipher( OpenCL::CPU );
-		cipher.Initialise( rKey );
-		
-		const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ) );
-		
-		const unsigned int size = result.size();
-		for( unsigned int i = 0; i < size; i++ ){
-			CPPUNIT_ASSERT_EQUAL( (int)expected[i], (int)result[i] );
 		}
 	}
 	
-	void OpenCLTest::testDecryption128() {
+	void OpenCLTest::testDecryption128CPU() {
 		const unsigned char key[] = { 
 			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
 		};
@@ -50,21 +57,164 @@ namespace AES {
 			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
 		};
 		
-		const RoundKey rKey( DataArray( key, key + 16 ) );
+		try{
+			OpenCL cipher( OpenCL::CPU );
+			cipher.Initialise( RoundKey( DataArray( key, key + 16 ) ) );
+			
+			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
 		
-		OpenCL cipher( OpenCL::CPU );
-		cipher.Initialise( rKey );
+		}
+	}
+
+	void OpenCLTest::testDecryptionCBC128CPU() {
+		const unsigned char iv[] = {
+			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F
+		};
 		
-		const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
+		const unsigned char key[] = { 
+			0x2b,0x7e,0x15,0x16,0x28,0xae,0xd2,0xa6,0xab,0xf7,0x15,0x88,0x09,0xcf,0x4f,0x3c
+		};
 		
-		const unsigned int size = result.size();
-		for( unsigned int i = 0; i < size; i++ ){
-			CPPUNIT_ASSERT_EQUAL( (int)expected[i], (int)result[i] );
+		const unsigned char data[] = {
+			0x76,0x49,0xab,0xac,0x81,0x19,0xb2,0x46,0xce,0xe9,0x8e,0x9b,0x12,0xe9,0x19,0x7d
+		};
+		
+		const unsigned char expected[] = { 
+			0x6b,0xc1,0xbe,0xe2,0x2e,0x40,0x9f,0x96,0xe9,0x3d,0x7e,0x11,0x73,0x93,0x17,0x2a
+		};
+		
+		try{
+			OpenCL cipher( OpenCL::CPU, Block::Mode::CipherBlockChaining, DataArray( iv, iv + 16 ) );
+			cipher.Initialise( RoundKey( DataArray( key, key + 16 ) ) );
+			
+			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
+			
+			for( unsigned int i = 0 ; i < result.size(); i++ ){
+				std::cout << std::hex << std::setw( 2 ) << std::setfill('0') << (int) result[i] << " ";;
+				if( (i + 1) % 16 == 0 ) std::cout << std::endl;
+			}
+			std::cout << std::endl;
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryption128GPU() {
+		const unsigned char key[] = { 
+			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
+		};
+		
+		const unsigned char data[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const unsigned char expected[] = {
+			0x69,0xc4,0xe0,0xd8,0x6a,0x7b,0x04,0x30,0xd8,0xcd,0xb7,0x80,0x70,0xb4,0xc5,0x5a
+		};
+		
+		try{
+			OpenCL cipher( OpenCL::GPU );
+			cipher.Initialise( RoundKey( DataArray( key, key + 16 ) ) );
+			
+			const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryption128GPU() {
+		const unsigned char key[] = { 
+			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
+		};
+		
+		const unsigned char data[] = {
+			0x69,0xc4,0xe0,0xd8,0x6a,0x7b,0x04,0x30,0xd8,0xcd,0xb7,0x80,0x70,0xb4,0xc5,0x5a
+		};
+		
+		const unsigned char expected[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		try{
+			OpenCL cipher( OpenCL::GPU );
+			cipher.Initialise( RoundKey( DataArray( key, key + 16 ) ) );
+			
+			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}	
+	
+	void OpenCLTest::testDecryptionCBC128GPU() {
+		const unsigned char iv[] = {
+			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F
+		};
+		
+		const unsigned char key[] = { 
+			0x2b,0x7e,0x15,0x16,0x28,0xae,0xd2,0xa6,0xab,0xf7,0x15,0x88,0x09,0xcf,0x4f,0x3c
+		};
+		
+		const unsigned char data[] = {
+			0x76,0x49,0xab,0xac,0x81,0x19,0xb2,0x46,0xce,0xe9,0x8e,0x9b,0x12,0xe9,0x19,0x7d
+		};
+		
+		const unsigned char expected[] = { 
+			0x6b,0xc1,0xbe,0xe2,0x2e,0x40,0x9f,0x96,0xe9,0x3d,0x7e,0x11,0x73,0x93,0x17,0x2a
+		};
+		
+		try{
+			OpenCL cipher( OpenCL::GPU, Block::Mode::CipherBlockChaining, DataArray( iv, iv + 16 ) );
+			cipher.Initialise( RoundKey( DataArray( key, key + 16 ) ) );
+			
+			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
+		
 		}
 	}
 	
 	// 192 Bit Tests
-	void OpenCLTest::testEncryption192() {
+	void OpenCLTest::testEncryption192CPU() {
 		const unsigned char key[] = { 
 			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
 			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17
@@ -78,20 +228,25 @@ namespace AES {
 			0xdd,0xa9,0x7c,0xa4,0x86,0x4c,0xdf,0xe0,0x6e,0xaf,0x70,0xa0,0xec,0x0d,0x71,0x91 
 		};
 		
-		const RoundKey rKey( DataArray( key, key + 24 ) );
+		try{
+			OpenCL cipher( OpenCL::CPU );
+			cipher.Initialise( RoundKey( DataArray( key, key + 24 ) ) );
+			
+			const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
 		
-		OpenCL cipher( OpenCL::CPU );
-		cipher.Initialise( rKey );
-		
-		const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ) );
-		
-		const unsigned int size = result.size();
-		for( unsigned int i = 0; i < size; i++ ){
-			CPPUNIT_ASSERT_EQUAL( (int)expected[i], (int)result[i] );
 		}
 	}
 	
-	void OpenCLTest::testDecryption192() {
+	void OpenCLTest::testDecryption192CPU() {
 		const unsigned char key[] = { 
 			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
 			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17 
@@ -105,21 +260,90 @@ namespace AES {
 			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
 		};
 		
-		const RoundKey rKey( DataArray( key, key + 24 ) );
+		try{
+			OpenCL cipher( OpenCL::CPU );
+			cipher.Initialise( RoundKey( DataArray( key, key + 24 ) ) );
+			
+			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
 		
-		OpenCL cipher( OpenCL::CPU );
-		cipher.Initialise( rKey );
+		}
+	}
+	
+	void OpenCLTest::testEncryption192GPU() {
+		const unsigned char key[] = { 
+			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
+			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17
+		};
 		
-		const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
+		const unsigned char data[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
 		
-		const unsigned int size = result.size();
-		for( unsigned int i = 0; i < size; i++ ){
-			CPPUNIT_ASSERT_EQUAL( (int)expected[i], (int)result[i] );
+		const unsigned char expected[] = {
+			0xdd,0xa9,0x7c,0xa4,0x86,0x4c,0xdf,0xe0,0x6e,0xaf,0x70,0xa0,0xec,0x0d,0x71,0x91 
+		};
+		
+		try{
+			OpenCL cipher( OpenCL::GPU );
+			cipher.Initialise( RoundKey( DataArray( key, key + 24 ) ) );
+			
+			const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryption192GPU() {
+		const unsigned char key[] = { 
+			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
+			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17 
+		};
+		
+		const unsigned char data[] = {
+			0xdd,0xa9,0x7c,0xa4,0x86,0x4c,0xdf,0xe0,0x6e,0xaf,0x70,0xa0,0xec,0x0d,0x71,0x91
+		};
+		
+		const unsigned char expected[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		try{
+			OpenCL cipher( OpenCL::GPU );
+			cipher.Initialise( RoundKey( DataArray( key, key + 24 ) ) );
+			
+			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
+		
 		}
 	}
 	
 	// 256 Bit Tests
-	void OpenCLTest::testEncryption256() {
+	void OpenCLTest::testEncryption256CPU() {
 		const unsigned char key[] = { 
 			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
 			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f 
@@ -133,20 +357,25 @@ namespace AES {
 			0x8e,0xa2,0xb7,0xca,0x51,0x67,0x45,0xbf,0xea,0xfc,0x49,0x90,0x4b,0x49,0x60,0x89 
 		};
 		
-		const RoundKey rKey( DataArray( key, key + 32 ) );
+		try{
+			OpenCL cipher( OpenCL::CPU );
+			cipher.Initialise( RoundKey( DataArray( key, key + 32 ) ) );
+			
+			const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
 		
-		OpenCL cipher( OpenCL::CPU );
-		cipher.Initialise( rKey );
-		
-		const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ) );
-		
-		const unsigned int size = result.size();
-		for( unsigned int i = 0; i < size; i++ ){
-			CPPUNIT_ASSERT_EQUAL( (int)expected[i], (int)result[i] );
 		}
 	}
 	
-	void OpenCLTest::testDecryption256() {
+	void OpenCLTest::testDecryption256CPU() {
 		const unsigned char key[] = { 
 			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
 			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f 
@@ -160,16 +389,85 @@ namespace AES {
 			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
 		};
 		
-		const RoundKey rKey( DataArray( key, key + 32 ) );
+		try{
+			OpenCL cipher( OpenCL::CPU );
+			cipher.Initialise( RoundKey( DataArray( key, key + 32 ) ) );
+			
+			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
 		
-		OpenCL cipher( OpenCL::CPU );
-		cipher.Initialise( rKey );
+		}
+	}
+	
+	void OpenCLTest::testEncryption256GPU() {
+		const unsigned char key[] = { 
+			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
+			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f 
+		};
 		
-		const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
+		const unsigned char data[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
 		
-		const unsigned int size = result.size();
-		for( unsigned int i = 0; i < size; i++ ){
-			CPPUNIT_ASSERT_EQUAL( (int)expected[i], (int)result[i] );
+		const unsigned char expected[] = {
+			0x8e,0xa2,0xb7,0xca,0x51,0x67,0x45,0xbf,0xea,0xfc,0x49,0x90,0x4b,0x49,0x60,0x89 
+		};
+		
+		try{
+			OpenCL cipher( OpenCL::GPU );
+			cipher.Initialise( RoundKey( DataArray( key, key + 32 ) ) );
+			
+			const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryption256GPU() {
+		const unsigned char key[] = { 
+			0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
+			0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f 
+		};
+		
+		const unsigned char data[] = {
+			0x8e,0xa2,0xb7,0xca,0x51,0x67,0x45,0xbf,0xea,0xfc,0x49,0x90,0x4b,0x49,0x60,0x89 
+		};
+		
+		const unsigned char expected[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		try{
+			OpenCL cipher( OpenCL::GPU );
+			cipher.Initialise( RoundKey( DataArray( key, key + 32 ) ) );
+			
+			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ) );
+			
+			const unsigned int size = result.size();
+			for( unsigned int i = 0; i < size; i++ ){
+				std::ostringstream stream;
+				stream << "Element " << i << " Differs";
+				
+				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
+		
 		}
 	}
 }

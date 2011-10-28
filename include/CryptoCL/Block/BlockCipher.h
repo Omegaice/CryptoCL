@@ -1,5 +1,5 @@
-#ifndef CRYPTOCL_BLOCK_BASE_H_
-#define CRYPTOCL_BLOCK_BASE_H_
+#ifndef CRYPTOCL_BLOCK_BLOCKCIPHER_H_
+#define CRYPTOCL_BLOCK_BLOCKCIPHER_H_
 
 #include "CryptoCL/Cipher.h"
 
@@ -12,18 +12,17 @@ namespace CryptoCL {
 			};
 		}
 		
-		class Base : public Cipher {
+		class BlockCipher : public Cipher {
 			protected:
 				Mode::BlockMode mMode;
 				DataArray mInitialisationVector;
-			private:
-				Base();
-				Base( const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
+			public:
+				BlockCipher( const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
 				
 				const Mode::BlockMode& Mode() const;
 				const DataArray& InitialisationVector() const;
-		}
+		};
 	}
 }
 
-#endif // CRYPTOCL_BLOCK_BASE_H_
+#endif // CRYPTOCL_BLOCK_BLOCKCIPHER_H_

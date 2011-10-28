@@ -1,15 +1,17 @@
 #ifndef CRYPTOCL_AES_REFERENCE_H_
 #define CRYPTOCL_AES_REFERENCE_H_
 
-#include "CryptoCL/Block/AES/Base.h"
+#include "CryptoCL/Block/AES/AESBlockCipher.h"
 
 namespace CryptoCL {
 	namespace Block {
 		namespace AES {
-			class Reference : public Base {
+			class Reference : public AESBlockCipher {
 				protected:	
 					DataArray mState;
 				public:
+					Reference( const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
+					
 					const DataArray Encrypt( const DataArray& data );
 					const DataArray Decrypt( const DataArray& data );
 				protected:
@@ -24,6 +26,14 @@ namespace CryptoCL {
 					void InvSubBytes();
 					void InvShiftRows();
 					void InvMixColumns();
+					
+					/* Block Modes */
+					void ModeECB( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded );
+					void ModeCBC( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded );
+					void ModePCBC( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded );
+					void ModeCFB( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded );
+					void ModeOFB( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded );
+					void ModeCRT( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded );
 			};
 		}
 	}

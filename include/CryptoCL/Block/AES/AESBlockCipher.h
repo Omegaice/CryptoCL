@@ -1,19 +1,19 @@
-#ifndef CRYPTOCL_AES_BASE_H_
-#define CRYPTOCL_AES_BASE_H_
+#ifndef CRYPTOCL_AES_AESBLOCKCIPHER_H_
+#define CRYPTOCL_AES_AESBLOCKCIPHER_H_
 
-#include "CryptoCL/Cipher.h"
+#include "CryptoCL/Block/BlockCipher.h"
 #include "CryptoCL/Block/AES/RoundKey.h"
 
 namespace CryptoCL {
 	namespace Block {
 		namespace AES {
-			class Base : public Cipher {
+			class AESBlockCipher : public BlockCipher {
 				protected:
 					RoundKey mKey;
 					bool mInitialised;
 				public:
-					Base();
-					virtual ~Base();
+					AESBlockCipher( const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
+					virtual ~AESBlockCipher();
 				
 					void Initialise( const RoundKey& key );
 					bool isInitialised() const;
@@ -26,4 +26,4 @@ namespace CryptoCL {
 	}
 }
 
-#endif // CRYPTOCL_AES_BASE_H_
+#endif // CRYPTOCL_AES_AESBLOCKCIPHER_H_

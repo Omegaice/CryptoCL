@@ -7,25 +7,41 @@ namespace AES {
 	class OpenCLTest : public CppUnit::TestFixture  {
 		private:
 			CPPUNIT_TEST_SUITE( OpenCLTest );
-				CPPUNIT_TEST( testEncryption128 );
-				CPPUNIT_TEST( testDecryption128 );
-				CPPUNIT_TEST( testEncryption192 );
-				CPPUNIT_TEST( testDecryption192 );
-				CPPUNIT_TEST( testEncryption256 );
-				CPPUNIT_TEST( testDecryption256 );
+				CPPUNIT_TEST( testEncryption128CPU );
+				CPPUNIT_TEST( testDecryption128CPU );
+				CPPUNIT_TEST( testDecryptionCBC128CPU );
+				CPPUNIT_TEST( testEncryption128GPU );
+				CPPUNIT_TEST( testDecryption128GPU );
+				CPPUNIT_TEST( testDecryptionCBC128GPU );
+				CPPUNIT_TEST( testEncryption192CPU );
+				CPPUNIT_TEST( testDecryption192CPU );
+				CPPUNIT_TEST( testEncryption192GPU );
+				CPPUNIT_TEST( testDecryption192GPU );
+				CPPUNIT_TEST( testEncryption256CPU );
+				CPPUNIT_TEST( testDecryption256CPU );
+				CPPUNIT_TEST( testEncryption256GPU );
+				CPPUNIT_TEST( testDecryption256GPU );
 			CPPUNIT_TEST_SUITE_END();
 		public:
 			// 128 Bit Tests
-			void testEncryption128();
-			void testDecryption128();
+			void testEncryption128CPU();
+			void testDecryption128CPU();
+			void testDecryptionCBC128CPU();
+			void testEncryption128GPU();
+			void testDecryption128GPU();
+			void testDecryptionCBC128GPU();
 			
 			// 192 Bit Tests
-			void testEncryption192();
-			void testDecryption192();
+			void testEncryption192CPU();
+			void testDecryption192CPU();
+			void testEncryption192GPU();
+			void testDecryption192GPU();
 			
 			// 256 Bit Tests
-			void testEncryption256();
-			void testDecryption256();
+			void testEncryption256CPU();
+			void testDecryption256CPU();
+			void testEncryption256GPU();
+			void testDecryption256GPU();
 	};
 
 }

@@ -2,7 +2,7 @@
 
 #include <cassert>
 #include <iostream>
-#include "CryptoCL/Block/AES/Base.h"
+#include "CryptoCL/Block/AES/AESBlockCipher.h"
 
 namespace CryptoCL {
 	namespace Block {
@@ -41,7 +41,7 @@ namespace CryptoCL {
 					if( eSize % (int)mSize == 0 ) RoundKey = KeyScheduleCore( RoundKey, rConIteration++ );
 					
 					/* Extra SBox */
-					if( mSize == Key::Bit256 && eSize % (int)mSize == 16 ) for(int a = 0; a < 4; a++) RoundKey[a] = Base::SBox[RoundKey[a]];
+					if( mSize == Key::Bit256 && eSize % (int)mSize == 16 ) for(int a = 0; a < 4; a++) RoundKey[a] = AESBlockCipher::SBox[RoundKey[a]];
 					
 					/* Xor Result */
 					for(int a = 0; a < 4; a++) RoundKey[a] ^= PreviousKey[a];
@@ -87,10 +87,10 @@ namespace CryptoCL {
 			const DataArray RoundKey::KeyScheduleCore( const DataArray& input, const unsigned int iteration ) {
 				DataArray output( 4 );
 				
-				output[0] = Base::SBox[input[1]] ^ Base::Rcon[iteration];
-				output[1] = Base::SBox[input[2]];
-				output[2] = Base::SBox[input[3]];
-				output[3] = Base::SBox[input[0]];
+				output[0] = AESBlockCipher::SBox[input[1]] ^ AESBlockCipher::Rcon[iteration];
+				output[1] = AESBlockCipher::SBox[input[2]];
+				output[2] = AESBlockCipher::SBox[input[3]];
+				output[3] = AESBlockCipher::SBox[input[0]];
 					
 				return output;
 			}
