@@ -126,32 +126,20 @@ namespace CryptoCL {
 				}
 			}
 			
-			DataArray MixColumn( const DataArray& column ) {
-				DataArray result( 4 );
+			void MixColumn( DataArray& column, const unsigned int pos ) {
+				const unsigned char a = gmul(column[pos+0],2) ^ gmul(column[pos+3],1) ^ gmul(column[pos+2],1) ^ gmul(column[pos+1],3);
+				const unsigned char b = gmul(column[pos+1],2) ^ gmul(column[pos+0],1) ^ gmul(column[pos+3],1) ^ gmul(column[pos+2],3);
+				const unsigned char c = gmul(column[pos+2],2) ^ gmul(column[pos+1],1) ^ gmul(column[pos+0],1) ^ gmul(column[pos+3],3);
+				const unsigned char d = gmul(column[pos+3],2) ^ gmul(column[pos+2],1) ^ gmul(column[pos+1],1) ^ gmul(column[pos+0],3);
 				
-				result[0] = gmul(column[0],2) ^ gmul(column[3],1) ^ gmul(column[2],1) ^ gmul(column[1],3);
-				result[1] = gmul(column[1],2) ^ gmul(column[0],1) ^ gmul(column[3],1) ^ gmul(column[2],3);
-				result[2] = gmul(column[2],2) ^ gmul(column[1],1) ^ gmul(column[0],1) ^ gmul(column[3],3);
-				result[3] = gmul(column[3],2) ^ gmul(column[2],1) ^ gmul(column[1],1) ^ gmul(column[0],3);
-				
-				return result;
+				column[pos+0] = a; column[pos+1] = b; column[pos+2] = c; column[pos+3] = d;
 			}
 
 			void Reference::MixColumns() {
-				for( unsigned int col = 0; col < 4; col++ ){
-					DataArray column( 4 );
-					column[0] = mState[col * 4 + 0];
-					column[1] = mState[col * 4 + 1];
-					column[2] = mState[col * 4 + 2];
-					column[3] = mState[col * 4 + 3];
-					
-					const DataArray result = MixColumn( column );
-					
-					mState[col * 4 + 0] = result[0];
-					mState[col * 4 + 1] = result[1];
-					mState[col * 4 + 2] = result[2];
-					mState[col * 4 + 3] = result[3];
-				}
+				MixColumn( mState, 0 );
+				MixColumn( mState, 4 );
+				MixColumn( mState, 8 );
+				MixColumn( mState, 12 );
 			}
 			
 			/* Decryption Helpers */
@@ -170,32 +158,20 @@ namespace CryptoCL {
 				}
 			}
 			
-			DataArray InvMixColumn( const DataArray& column ){
-				DataArray result( 4 );
-
-				result[0] = gmul(column[0],14) ^ gmul(column[3],9) ^ gmul(column[2],13) ^ gmul(column[1],11);
-				result[1] = gmul(column[1],14) ^ gmul(column[0],9) ^ gmul(column[3],13) ^ gmul(column[2],11);
-				result[2] = gmul(column[2],14) ^ gmul(column[1],9) ^ gmul(column[0],13) ^ gmul(column[3],11);
-				result[3] = gmul(column[3],14) ^ gmul(column[2],9) ^ gmul(column[1],13) ^ gmul(column[0],11);
+			void InvMixColumn( DataArray& column, const unsigned int pos ){
+				const unsigned char a = gmul(column[pos+0],14) ^ gmul(column[pos+3],9) ^ gmul(column[pos+2],13) ^ gmul(column[pos+1],11);
+				const unsigned char b = gmul(column[pos+1],14) ^ gmul(column[pos+0],9) ^ gmul(column[pos+3],13) ^ gmul(column[pos+2],11);
+				const unsigned char c = gmul(column[pos+2],14) ^ gmul(column[pos+1],9) ^ gmul(column[pos+0],13) ^ gmul(column[pos+3],11);
+				const unsigned char d = gmul(column[pos+3],14) ^ gmul(column[pos+2],9) ^ gmul(column[pos+1],13) ^ gmul(column[pos+0],11);
 					
-				return result;
+				column[pos+0] = a; column[pos+1] = b; column[pos+2] = c; column[pos+3] = d;
 			}
 
 			void Reference::InvMixColumns() {
-				for( unsigned int col = 0; col < 4; col++ ){
-					DataArray column( 4 );
-					column[0] = mState[col * 4 + 0];
-					column[1] = mState[col * 4 + 1];
-					column[2] = mState[col * 4 + 2];
-					column[3] = mState[col * 4 + 3];
-					
-					const DataArray result = InvMixColumn( column );
-					
-					mState[col * 4 + 0] = result[0];
-					mState[col * 4 + 1] = result[1];
-					mState[col * 4 + 2] = result[2];
-					mState[col * 4 + 3] = result[3];
-				}
+				InvMixColumn( mState, 0 );
+				InvMixColumn( mState, 4 );
+				InvMixColumn( mState, 8 );
+				InvMixColumn( mState, 12 );
 			}
 		}
 	}
