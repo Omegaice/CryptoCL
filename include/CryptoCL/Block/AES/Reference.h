@@ -26,14 +26,6 @@ namespace CryptoCL {
 					void InvSubBytes();
 					void InvShiftRows();
 					void InvMixColumns();
-					
-					/* Block Modes */
-					void ModeECB( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded );
-					void ModeCBC( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded );
-					void ModePCBC( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded );
-					void ModeCFB( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded );
-					void ModeOFB( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded );
-					void ModeCRT( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded );
 			};
 		}
 	}

@@ -7,8 +7,7 @@ namespace CryptoCL {
 	namespace Block {
 		namespace Mode {
 			enum BlockMode {
-				ElectronicCookBook, CipherBlockChaining, PropagatingCipherBlockChaining, 
-				CipherFeedback, OutputFeedback, Counter
+				ElectronicCookBook, CipherBlockChaining
 			};
 		}
 		

@@ -197,61 +197,6 @@ namespace CryptoCL {
 					mState[col * 4 + 3] = result[3];
 				}
 			}
-			
-			/* Block Modes */
-			void Reference::ModeECB( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded) {
-			
-			}
-			
-			void Reference::ModeCBC( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded ) {
-				if( round == 0 ){
-					unsigned int stateSize = mState.size();
-					for( unsigned int i = 0; i < stateSize; i++ ){
-						mState[i] ^= mInitialisationVector[i];
-					}
-				}else{
-					unsigned int stateSize = mState.size();
-					for( unsigned int i = 0; i < stateSize; i++ ){
-						mState[i] ^= PreviousEncoded[i];
-					}
-				}
-			}
-			
-			void Reference::ModePCBC( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded ) {
-				if( round == 0 ){
-					unsigned int stateSize = mState.size();
-					for( unsigned int i = 0; i < stateSize; i++ ){
-						mState[i] ^= mInitialisationVector[i];
-					}
-				}else{
-					unsigned int stateSize = mState.size();
-					for( unsigned int i = 0; i < stateSize; i++ ){
-						mState[i] ^= ( PreviousPlain[i] ^ PreviousEncoded[i] );
-					}
-				}
-			}
-			
-			void Reference::ModeCFB( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded ) {
-				if( round == 0 ){
-					unsigned int stateSize = mState.size();
-					for( unsigned int i = 0; i < stateSize; i++ ){
-						mState[i] ^= mInitialisationVector[i];
-					}
-				}else{
-					unsigned int stateSize = mState.size();
-					for( unsigned int i = 0; i < stateSize; i++ ){
-						mState[i] ^= ( PreviousPlain[i] ^ PreviousEncoded[i] );
-					}
-				}
-			}
-			
-			void Reference::ModeOFB( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded ) {
-			
-			}
-			
-			void Reference::ModeCRT( unsigned int round, const DataArray& PreviousPlain, const DataArray& PreviousEncoded ) {
-			
-			}
 		}
 	}
 }
