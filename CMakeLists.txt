@@ -100,6 +100,12 @@ if( BUILD_TESTING )
 	add_subdirectory( "test" )
 endif( BUILD_TESTING )
 
+# Testing
+option( BUILD_BENCHMARK "Build benchmark code" Off )
+if( BUILD_BENCHMARK )
+	add_subdirectory( "benchmark" )
+endif( BUILD_BENCHMARK )
+
 # Installation
 install( DIRECTORY "include/" DESTINATION "include/" PATTERN ".svn" EXCLUDE PATTERN "*.h" )
 install( TARGETS cryptocl RUNTIME DESTINATION "bin" LIBRARY DESTINATION "lib" ARCHIVE DESTINATION "lib" )
