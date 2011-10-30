@@ -51,7 +51,7 @@ uchar gmul(uchar a, uchar b) {
 	return p;
 }
 
-__kernel void decryptCBC( __global const uchar *rkey, __global const uchar *data, __global const uchar *previous, __global uchar *result, const uint rounds ) {
+__kernel void decryptCBCUnoptimized( __global const uchar *rkey, __global const uchar *data, __global const uchar *previous, __global uchar *result, const uint rounds ) {
 	const uint idx = get_global_id( 0 );
 	const uint startPos = 16 * idx;
 	
@@ -85,16 +85,12 @@ __kernel void decryptCBC( __global const uchar *rkey, __global const uchar *data
 		for( uint col = 0; col < 4; col++ ){
 			const uint colPos = col * 4;
 			
-			uchar column[4];
-			column[0] = block[colPos+0];
-			column[1] = block[colPos+1];
-			column[2] = block[colPos+2];
-			column[3] = block[colPos+3];
+			const uchar a = gmul(block[colPos+0],14) ^ gmul(block[colPos+3],9) ^ gmul(block[colPos+2],13) ^ gmul(block[colPos+1],11);
+			const uchar b = gmul(block[colPos+1],14) ^ gmul(block[colPos+0],9) ^ gmul(block[colPos+3],13) ^ gmul(block[colPos+2],11);
+			const uchar c = gmul(block[colPos+2],14) ^ gmul(block[colPos+1],9) ^ gmul(block[colPos+0],13) ^ gmul(block[colPos+3],11);
+			const uchar d = gmul(block[colPos+3],14) ^ gmul(block[colPos+2],9) ^ gmul(block[colPos+1],13) ^ gmul(block[colPos+0],11);
 			
-			block[colPos+0] = gmul(column[0],14) ^ gmul(column[3],9) ^ gmul(column[2],13) ^ gmul(column[1],11);
-			block[colPos+1] = gmul(column[1],14) ^ gmul(column[0],9) ^ gmul(column[3],13) ^ gmul(column[2],11);
-			block[colPos+2] = gmul(column[2],14) ^ gmul(column[1],9) ^ gmul(column[0],13) ^ gmul(column[3],11);
-			block[colPos+3] = gmul(column[3],14) ^ gmul(column[2],9) ^ gmul(column[1],13) ^ gmul(column[0],11);
+			block[colPos+0] = a; block[colPos+1] = b; block[colPos+2] = c; block[colPos+3] = d;
 		}
 	}
 	
@@ -118,4 +114,57 @@ __kernel void decryptCBC( __global const uchar *rkey, __global const uchar *data
 	
 	// Copy Result
 	for( uint i = 0; i < 16; i++ ) result[startPos+i] = block[i];
+}
+
+__kernel void decryptCBC( __global const uchar *rkey, __global const uchar *data, __global const uchar *previous, __global uchar *result, const uint rounds ) {
+	const uint idx = get_global_id( 0 );
+	const uint startPos = 16 * idx;
+	
+	// Create Block + Add Round Key
+	uchar block[16];
+	for( uint i = 0; i < 16; i++) block[i] = data[startPos+i] ^ rkey[rounds*16+i];
+	
+	// 
+	for( uint i = 0; i < 16; i++ ) block[i] = block[i] ;
+		
+	// Calculate Rounds
+	for( uint j = rounds - 1; j > 0; j-- ){
+		const uint jPos = j * 16;
+		
+		// Inverse Shift Rows
+		uchar tempd[16];
+		for( unsigned int i = 0; i < 16; i++ ) tempd[i] = block[i];
+		
+		for (unsigned int i = 0; i < 16; i++) {
+			unsigned int k = (i - (i % 4 * 4)) % 16;
+			block[i] = tempd[k];
+		}
+	
+		// Inverse Sub Bytes + Add Round Key
+		for( uint i = 0; i < 16; i++ ) block[i] = InvSBox[block[i]] ^ rkey[jPos+i];
+		
+		// Inverse Mix Columns
+		for( uint col = 0; col < 4; col++ ){
+			const uint colPos = col * 4;
+			
+			const uchar a = gmul(block[colPos+0],14) ^ gmul(block[colPos+3],9) ^ gmul(block[colPos+2],13) ^ gmul(block[colPos+1],11);
+			const uchar b = gmul(block[colPos+1],14) ^ gmul(block[colPos+0],9) ^ gmul(block[colPos+3],13) ^ gmul(block[colPos+2],11);
+			const uchar c = gmul(block[colPos+2],14) ^ gmul(block[colPos+1],9) ^ gmul(block[colPos+0],13) ^ gmul(block[colPos+3],11);
+			const uchar d = gmul(block[colPos+3],14) ^ gmul(block[colPos+2],9) ^ gmul(block[colPos+1],13) ^ gmul(block[colPos+0],11);
+			
+			block[colPos+0] = a; block[colPos+1] = b; block[colPos+2] = c; block[colPos+3] = d;
+		}
+	}
+	
+	// Inverse Sub Bytes + Inverse Shift Rows
+	uchar temp[16];
+	for( unsigned int i = 0; i < 16; i++ ) temp[i] = InvSBox[block[i]];
+	
+	for (uint i = 0; i < 16; i++) {
+		const uint k = (i - ( (i % 4) * 4)) % 16;
+		block[i] = temp[k];
+	}
+	
+	// Add Round Key + XOR with previous + Copy Result
+	for( uint i = 0; i < 16; i++ ) result[startPos+i] = block[i] ^ rkey[i] ^ previous[startPos+i];
 }

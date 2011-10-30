@@ -135,11 +135,22 @@ namespace CryptoCL {
 				column[pos+0] = a; column[pos+1] = b; column[pos+2] = c; column[pos+3] = d;
 			}
 
+			void OptimizedMixColumn( DataArray& column, const unsigned int pos ) {
+				const unsigned char cZero = gmul(column[pos+0],2), cOne = gmul(column[pos+1],2), cTwo = gmul(column[pos+2],2), cThree = gmul(column[pos+3],2);
+				
+				const unsigned char a = cZero  ^ column[pos+3] ^ column[pos+2] ^ cOne   ^ column[pos+1];
+				const unsigned char b = cOne   ^ column[pos+0] ^ column[pos+3] ^ cTwo   ^ column[pos+2];
+				const unsigned char c = cTwo   ^ column[pos+1] ^ column[pos+0] ^ cThree ^ column[pos+3];
+				const unsigned char d = cThree ^ column[pos+2] ^ column[pos+1] ^ cZero  ^ column[pos+0];
+				
+				column[pos+0] = a; column[pos+1] = b; column[pos+2] = c; column[pos+3] = d;
+			}
+
 			void Reference::MixColumns() {
-				MixColumn( mState, 0 );
-				MixColumn( mState, 4 );
-				MixColumn( mState, 8 );
-				MixColumn( mState, 12 );
+				OptimizedMixColumn( mState, 0 );
+				OptimizedMixColumn( mState, 4 );
+				OptimizedMixColumn( mState, 8 );
+				OptimizedMixColumn( mState, 12 );
 			}
 			
 			/* Decryption Helpers */
