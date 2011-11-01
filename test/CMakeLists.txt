@@ -18,8 +18,3 @@ endif( NOT BUILD_OPENCL )
 # Build
 add_executable( cryptocl_test main.cpp ${TEST_SOURCES} ${TEST_HEADERS} ${LIBRARY_HEADERS} )
 target_link_libraries( cryptocl_test "cryptocl" "cppunit" ${LIBRARY_SOURCES} )
-
-message( "${CMAKE_SOURCE_DIR}/data")
-file( GLOB Data RELATIVE "${CMAKE_SOURCE_DIR}" "data/*" )
-message( "${Data}" )
-CopyFiles( cryptocl_test "${Data}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/" )
