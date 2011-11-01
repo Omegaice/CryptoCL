@@ -75,7 +75,7 @@ namespace CryptoCL {
 						if( i == 0 ) {
 							for(unsigned int s = 0; s < 16; s++ ) mState[s] ^= mInitialisationVector[s];
 						}else{
-							for(unsigned int s = 0; s < 16; s++ ) mState[s] ^= result[sPos-16+s];
+							for(unsigned int s = 0; s < 16; s++ ) mState[s] ^= data[sPos-16+s];
 						}
 					}
 					
