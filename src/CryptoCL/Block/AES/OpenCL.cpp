@@ -29,7 +29,14 @@ namespace CryptoCL {
 			}
 			
 			OpenCL::~OpenCL() {
-			
+				delete mPlatformManager;
+				
+				if( mQueue ) delete mQueue;
+				if( mContext ) delete mContext;
+				
+				if( mKernelE ) delete mKernelE;
+				if( mKernelD ) delete mKernelD;
+				if( mKernelCBCD ) delete mKernelCBCD;
 			}
 			
 			void OpenCL::OnInitialise( const RoundKey& key ) {
