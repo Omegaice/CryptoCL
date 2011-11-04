@@ -18,3 +18,18 @@ endif( NOT BUILD_OPENCL )
 # Build
 add_executable( cryptocl_benchmark main.cpp ${TEST_SOURCES} ${TEST_HEADERS} )
 target_link_libraries( cryptocl_benchmark "cryptocl" )
+
+# Copy files
+if( BUILD_OPENCL )
+	if( CMAKE_GENERATOR MATCHES "Xcode" )
+		add_custom_command( 
+			TARGET cryptocl_benchmark 
+			COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/data/ ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/data/ 
+		)
+	else()
+		add_custom_command( 
+			TARGET cryptocl_benchmark 
+			COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/data/ ${CMAKE_CURRENT_BINARY_DIR}/data/ 
+		)
+	endif()
+endif()

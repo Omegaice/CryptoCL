@@ -7,7 +7,7 @@ include( CopyFile )
 include( Architecture )
 
 # TQDLib
-set( TQDLIB_DIR "" CACHE PATH "TQDLib Base Directory")
+set( TQDLIB_DIR "$ENV{TQDLIB_HOME}" CACHE PATH "TQDLib Base Directory")
 if( TQDLIB_DIR )
     # Setup definition for compilation
 	if( MSVC )
@@ -20,7 +20,7 @@ if( TQDLIB_DIR )
 	option( BUILD_OPENCL "Build with OpenCL" Off )
 	if( BUILD_OPENCL )
 		find_library( TQD_OPENCL "tqdlib-compute-opencl-s" HINT "${TQDLIB_DIR}/lib/" )
-		find_library( OPENCL_LIB "OpenCL" )
+		find_library( OPENCL_LIB "OpenCL" HINT $ENV{OPENCL_HOME} )
 
 		list( APPEND LIB_GENERAL "${TQD_OPENCL}" )
 		list( APPEND LIB_GENERAL "${OPENCL_LIB}" )
@@ -96,7 +96,6 @@ endif( BUILD_SHARED )
 # Testing
 option( BUILD_TESTING "Build test code" Off )
 if( BUILD_TESTING )
-	# Build Program Tests
 	add_subdirectory( "test" )
 endif( BUILD_TESTING )
 
