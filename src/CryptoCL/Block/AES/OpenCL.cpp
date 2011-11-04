@@ -31,12 +31,12 @@ namespace CryptoCL {
 			OpenCL::~OpenCL() {
 				delete mPlatformManager;
 				
+				if( mEncryption ) delete mEncryption;
+				if( mDecryption ) delete mDecryption;
+				if( mDecryptionCBC ) delete mDecryptionCBC;
+				
 				if( mQueue ) delete mQueue;
 				if( mContext ) delete mContext;
-				
-				if( mKernelE ) delete mKernelE;
-				if( mKernelD ) delete mKernelD;
-				if( mKernelCBCD ) delete mKernelCBCD;
 			}
 			
 			void OpenCL::OnInitialise( const RoundKey& key ) {
@@ -67,14 +67,12 @@ namespace CryptoCL {
 				
 				if( eSource.empty() ) exit( EXIT_FAILURE );
 				
-				Program eProgram( *mContext, device );
-				if( eProgram.SourceCode( eSource ) ) {
-					eProgram.Compile();
+				mEncryption = new Program( *mContext, device );
+				if( mEncryption->SourceCode( eSource ) ) {
+					mEncryption->Compile();
 				} else {
 					throw std::exception();
 				}
-				
-				mKernelE = new Kernel( eProgram, "encrypt" );
 				
 				// Decryption 
 				std::ifstream dFile( "data/aes_decrypt.cl" );
@@ -82,14 +80,12 @@ namespace CryptoCL {
 				
 				if( dSource.empty() ) exit( EXIT_FAILURE );
 				
-				Program dProgram( *mContext, device );
-				if( dProgram.SourceCode( dSource ) ) {
-					dProgram.Compile();
+				mDecryption = new Program( *mContext, device );
+				if( mDecryption->SourceCode( dSource ) ) {
+					mDecryption->Compile();
 				} else {
 					throw std::exception();
 				}
-				
-				mKernelD = new Kernel( dProgram, "decrypt" );
 				
 				// Decryption 
 				std::ifstream dFileCBC( "data/aes_decryptCBC.cl" );
@@ -97,14 +93,12 @@ namespace CryptoCL {
 				
 				if( dSourceCBC.empty() ) exit( EXIT_FAILURE );
 				
-				Program dProgramCBC( *mContext, device );
-				if( dProgramCBC.SourceCode( dSourceCBC ) ) {
-					dProgramCBC.Compile();
+				mDecryptionCBC = new Program( *mContext, device );
+				if( mDecryptionCBC->SourceCode( dSourceCBC ) ) {
+					mDecryptionCBC->Compile();
 				} else {
 					throw std::exception();
 				}
-				
-				mKernelCBCD = new Kernel( dProgramCBC, "decryptCBC" );
 			}
 						
 			const DataArray OpenCL::Encrypt( const DataArray& data ) {
@@ -116,23 +110,25 @@ namespace CryptoCL {
 					
 					Buffer RoundKey( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * roundKey.size(), &roundKey[0] );
 					
+					Kernel kernel = mEncryption->GetKernel("encrypt");
+					
 					if( mMode != Mode::CipherBlockChaining ){
 						DataArray aData( data.begin(), data.end() );
 						
 						Buffer Input( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * aData.size(), &aData[0] );
 						Buffer Result( *mContext, CL_MEM_WRITE_ONLY, sizeof( unsigned char ) * aData.size(), 0 );
 						
-						bool paramSuccess = mKernelE->Parameter( 0, RoundKey );
-						paramSuccess |= mKernelE->Parameter( 1, Input );
-						paramSuccess |= mKernelE->Parameter( 2, Result );
-						paramSuccess |= mKernelE->Parameter( 3, sizeof( cl_int ), &roundCount );
+						bool paramSuccess = kernel.Parameter( 0, RoundKey );
+						paramSuccess |= kernel.Parameter( 1, Input );
+						paramSuccess |= kernel.Parameter( 2, Result );
+						paramSuccess |= kernel.Parameter( 3, sizeof( cl_int ), &roundCount );
 						
 						if( !paramSuccess ) {
 							std::cerr << "Parameters Invalid" << std::endl;
 							throw std::exception();
 						}
 
-						mQueue->RangeKernel( *mKernelE, 1, aData.size() / 16 );
+						mQueue->RangeKernel( kernel, 1, aData.size() / 16 );
 						
 						result.resize( aData.size() );
 						mQueue->ReadBuffer( Result, sizeof( unsigned char ) * aData.size(), &result[0] );
@@ -155,17 +151,17 @@ namespace CryptoCL {
 							Buffer Input( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * inData.size(), &inData[0] );
 							Buffer Result( *mContext, CL_MEM_WRITE_ONLY, sizeof( unsigned char ) * inData.size(), 0 );
 							
-							bool paramSuccess = mKernelE->Parameter( 0, RoundKey );
-							paramSuccess |= mKernelE->Parameter( 1, Input );
-							paramSuccess |= mKernelE->Parameter( 2, Result );
-							paramSuccess |= mKernelE->Parameter( 3, sizeof( cl_int ), &roundCount );
+							bool paramSuccess = kernel.Parameter( 0, RoundKey );
+							paramSuccess |= kernel.Parameter( 1, Input );
+							paramSuccess |= kernel.Parameter( 2, Result );
+							paramSuccess |= kernel.Parameter( 3, sizeof( cl_int ), &roundCount );
 							
 							if( !paramSuccess ) {
 								std::cerr << "Parameters Invalid" << std::endl;
 								throw std::exception();
 							}
 							
-							mQueue->RangeKernel( *mKernelE, 1, 1 );
+							mQueue->RangeKernel( kernel, 1, 1 );
 							
 							DataArray outData( inData.size() );
 							mQueue->ReadBuffer( Result, sizeof( unsigned char ) * outData.size(), &outData[0] );
@@ -192,36 +188,40 @@ namespace CryptoCL {
 					Buffer Result( *mContext, CL_MEM_WRITE_ONLY, sizeof( unsigned char ) * inData.size(), 0 );
 					
 					if( mMode != Mode::CipherBlockChaining ){
-						bool paramSuccess = mKernelD->Parameter( 0, RoundKey );
-						paramSuccess |= mKernelD->Parameter( 1, Input );
-						paramSuccess |= mKernelD->Parameter( 2, Result );
-						paramSuccess |= mKernelD->Parameter( 3, sizeof( cl_int ), &rCount );
+						Kernel kernel = mDecryption->GetKernel( "decrypt" );
+						
+						bool paramSuccess = kernel.Parameter( 0, RoundKey );
+						paramSuccess |= kernel.Parameter( 1, Input );
+						paramSuccess |= kernel.Parameter( 2, Result );
+						paramSuccess |= kernel.Parameter( 3, sizeof( cl_int ), &rCount );
 						
 						if( !paramSuccess ) {
 							std::cerr << "Parameters Invalid" << std::endl;
 							throw std::exception();
 						}
 
-						mQueue->RangeKernel( *mKernelD, global_ws, local_ws );
+						mQueue->RangeKernel( kernel, global_ws, local_ws );
 					}else{
+						Kernel kernel = mDecryptionCBC->GetKernel( "decryptCBC" );
+						
 						DataArray previous;
 						previous.insert( previous.end(), mInitialisationVector.begin(), mInitialisationVector.end() );
 						previous.insert( previous.end(), inData.begin(), inData.end() - 16 );
 					
 						Buffer Previous( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * previous.size(), &previous[0] );
 						
-						bool paramSuccess = mKernelCBCD->Parameter( 0, RoundKey );
-						paramSuccess |= mKernelCBCD->Parameter( 1, Input );
-						paramSuccess |= mKernelCBCD->Parameter( 2, Previous );
-						paramSuccess |= mKernelCBCD->Parameter( 3, Result );
-						paramSuccess |= mKernelCBCD->Parameter( 4, sizeof( cl_int ), &rCount );
+						bool paramSuccess = kernel.Parameter( 0, RoundKey );
+						paramSuccess |= kernel.Parameter( 1, Input );
+						paramSuccess |= kernel.Parameter( 2, Previous );
+						paramSuccess |= kernel.Parameter( 3, Result );
+						paramSuccess |= kernel.Parameter( 4, sizeof( cl_int ), &rCount );
 						
 						if( !paramSuccess ) {
 							std::cerr << "Parameters Invalid" << std::endl;
 							throw std::exception();
 						}
 
-						mQueue->RangeKernel( *mKernelCBCD, global_ws, local_ws );
+						mQueue->RangeKernel( kernel, global_ws, local_ws );
 					}
 					
 					mQueue->ReadBuffer( Result, sizeof( char ) * inData.size(), &result[0] );

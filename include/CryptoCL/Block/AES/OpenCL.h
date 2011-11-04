@@ -10,7 +10,7 @@ namespace tqd{
 			class Context;
 			class Buffer;
 			class Queue;
-			class Kernel;
+			class Program;
 			class PlatformManager;
 		}
 	}
@@ -25,8 +25,8 @@ namespace CryptoCL {
 				protected:
 					EDevice mDevice;
 					tqd::Compute::OpenCL::Queue *mQueue;
-					tqd::Compute::OpenCL::Kernel *mKernelE, *mKernelD, *mKernelCBCD;
 					tqd::Compute::OpenCL::Context *mContext;
+					tqd::Compute::OpenCL::Program *mEncryption, *mDecryption, *mDecryptionCBC;
 					tqd::Compute::OpenCL::PlatformManager *mPlatformManager;
 				public:
 					OpenCL( const EDevice device, const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
