@@ -12,7 +12,8 @@
 #include <TQD/Compute/OpenCL/Program.h>
 #include <TQD/Compute/OpenCL/Context.h>
 #include <TQD/Compute/OpenCL/Platform.h>
-#include <TQD/Compute/OpenCL/PlatformManager.h>
+#include <TQD/Compute/OpenCL/DeviceList.h>
+#include <TQD/Compute/OpenCL/PlatformList.h>
 
 using namespace tqd::Compute::OpenCL;
 
@@ -24,12 +25,12 @@ namespace CryptoCL {
 			}
 			
 			OpenCL::OpenCL( const EDevice device, const Mode::BlockMode mode, const DataArray& iv ) 
-				: AESBlockCipher( mode, iv ), mDevice( device ), mPlatformManager( new PlatformManager ) {
+				: AESBlockCipher( mode, iv ), mDevice( device ), mPlatformList( new PlatformList ) {
 			
 			}
 			
 			OpenCL::~OpenCL() {
-				delete mPlatformManager;
+				delete mPlatformList;
 				
 				if( mEncryption ) delete mEncryption;
 				if( mDecryption ) delete mDecryption;
@@ -40,8 +41,6 @@ namespace CryptoCL {
 			}
 			
 			void OpenCL::OnInitialise( const RoundKey& key ) {
-				Platform mPlatform = mPlatformManager->PlatformInstance( 0 );
-				
 				cl_device_type devType = 0;
 				switch( mDevice ){
 					case CPU:
@@ -52,13 +51,29 @@ namespace CryptoCL {
 						break;
 				};
 				
-				cl_device_id device = 0;
-				cl_int error = clGetDeviceIDs( mPlatform.Data(), devType, 1, &device, 0 );
-				if( error != CL_SUCCESS ) throw DeviceUnavailiable();
-								
-				Device dev( device );
+				Device device;
 				
-				mContext = new Context( dev );
+				const unsigned int platforms = mPlatformList->Count();
+				for( unsigned int i = 0; i < platforms; i++ ){
+					DeviceList devList( mPlatformList->GetPlatform( i ) );
+					
+					const unsigned int devices = devList.Count();
+					for( unsigned int j = 0; j < devices; j++ ){
+						Device temp = devList.GetDevice( j );
+						
+						cl_device_type type;
+						temp.InfoData( CL_DEVICE_TYPE, &type );
+						
+						if( type == devType ) {
+							device = temp;
+							break;
+						}
+					}
+				}
+				
+				if( !device.isValid() ) throw DeviceUnavailiable();
+								
+				mContext = new Context( device );
 				mQueue = new Queue( *mContext, device );
 				
 				// Encryption 
