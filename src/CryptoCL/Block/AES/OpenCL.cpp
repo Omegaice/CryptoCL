@@ -82,12 +82,7 @@ namespace CryptoCL {
 				
 				if( eSource.empty() ) exit( EXIT_FAILURE );
 				
-				mEncryption = new Program( *mContext, device );
-				if( mEncryption->SourceCode( eSource ) ) {
-					mEncryption->Compile();
-				} else {
-					throw std::exception();
-				}
+				mEncryption = new Program( *mContext, device, eSource );
 				
 				// Decryption 
 				std::ifstream dFile( "data/aes_decrypt.cl" );
@@ -95,12 +90,7 @@ namespace CryptoCL {
 				
 				if( dSource.empty() ) exit( EXIT_FAILURE );
 				
-				mDecryption = new Program( *mContext, device );
-				if( mDecryption->SourceCode( dSource ) ) {
-					mDecryption->Compile();
-				} else {
-					throw std::exception();
-				}
+				mDecryption = new Program( *mContext, device, dSource );
 				
 				// Decryption 
 				std::ifstream dFileCBC( "data/aes_decryptCBC.cl" );
@@ -108,12 +98,7 @@ namespace CryptoCL {
 				
 				if( dSourceCBC.empty() ) exit( EXIT_FAILURE );
 				
-				mDecryptionCBC = new Program( *mContext, device );
-				if( mDecryptionCBC->SourceCode( dSourceCBC ) ) {
-					mDecryptionCBC->Compile();
-				} else {
-					throw std::exception();
-				}
+				mDecryptionCBC = new Program( *mContext, device, dSourceCBC );
 			}
 						
 			const DataArray OpenCL::Encrypt( const DataArray& data ) {
