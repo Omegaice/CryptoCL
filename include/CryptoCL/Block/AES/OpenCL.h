@@ -30,6 +30,10 @@ namespace CryptoCL {
 					tqd::Compute::OpenCL::PlatformList *mPlatformList;
 				public:
 					OpenCL( const EDevice device, const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
+					
+					OpenCL( const OpenCL& other );
+					OpenCL& operator=( const OpenCL& other );
+					
 					~OpenCL();
 					
 					const DataArray Encrypt( const DataArray& data );

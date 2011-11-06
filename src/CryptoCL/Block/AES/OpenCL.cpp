@@ -29,6 +29,35 @@ namespace CryptoCL {
 			
 			}
 			
+			OpenCL::OpenCL( const OpenCL& other ) 
+				: AESBlockCipher( other.mMode, other.mInitialisationVector ),
+				mDevice( other.mDevice ), mQueue( other.mQueue ),
+				mContext( other.mContext ), mEncryption( other.mEncryption ),
+				mDecryption( other.mDecryption ), mDecryptionCBC( other.mDecryptionCBC ),
+				mPlatformList( other.mPlatformList ) {
+			
+			}
+			
+			OpenCL& OpenCL::operator=( const OpenCL& other ) {
+				if( this != &other ){
+					// Block Cipher
+					mMode = other.mMode;
+					mInitialised = other.mInitialised;
+					mInitialisationVector = other.mInitialisationVector;
+					
+					// OpenCL
+					mDevice = other.mDevice;
+					mQueue = other.mQueue;
+					mContext = other.mContext;
+					mEncryption = other.mEncryption;
+					mDecryption = other.mDecryption;
+					mDecryptionCBC = other.mDecryptionCBC;
+					mPlatformList = other.mPlatformList;
+				}
+				
+				return *this;
+			}
+			
 			OpenCL::~OpenCL() {
 				delete mPlatformList;
 				
