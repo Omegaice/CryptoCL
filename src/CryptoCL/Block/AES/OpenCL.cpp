@@ -25,7 +25,9 @@ namespace CryptoCL {
 			}
 			
 			OpenCL::OpenCL( const EDevice device, const Mode::BlockMode mode, const DataArray& iv ) 
-				: AESBlockCipher( mode, iv ), mDevice( device ), mPlatformList( new PlatformList ) {
+				: AESBlockCipher( mode, iv ), mDevice( device ), mQueue( 0 ),
+				mContext( 0 ), mEncryption( 0 ), mDecryption( 0 ), mDecryptionCBC( 0 ),
+				mPlatformList( new PlatformList ) {
 			
 			}
 			
