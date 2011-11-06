@@ -5,7 +5,8 @@
 namespace CryptoCL {
 	namespace Block {
 		namespace AES {
-			AESBlockCipher::AESBlockCipher( const Mode::BlockMode mode, const DataArray& iv ) : BlockCipher( mode, iv ), mInitialised( false ) {
+			AESBlockCipher::AESBlockCipher( const Mode::BlockMode mode, const DataArray& iv ) 
+				: BlockCipher( mode, iv ), mInitialised( false ) {
 			
 			}
 			
