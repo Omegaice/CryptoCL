@@ -7,11 +7,13 @@
 namespace CryptoCL {
 	namespace Block {
 		namespace AES {
-			RoundKey::RoundKey() : mSize( Key::None ) { 
+			RoundKey::RoundKey() 
+				: mSize( Key::None ), mData( 0 ) { 
 			
 			}
 			
-			RoundKey::RoundKey( const DataArray& key ) {
+			RoundKey::RoundKey( const DataArray& key ) 
+				: mSize( Key::None ), mData( 0 ) {
 				Initialise( key );
 			}
 					
