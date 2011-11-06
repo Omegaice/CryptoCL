@@ -7,7 +7,8 @@ namespace CryptoCL {
 	namespace Block {
 		namespace AES {
 			/* Public Functions */
-			Reference::Reference( const Mode::BlockMode mode, const DataArray& iv ) : AESBlockCipher( mode, iv ) {
+			Reference::Reference( const Mode::BlockMode mode, const DataArray& iv ) 
+				: AESBlockCipher( mode, iv ), mState( 0 ) {
 			
 			}
 			
