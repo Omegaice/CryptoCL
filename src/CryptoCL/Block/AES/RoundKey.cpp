@@ -52,20 +52,24 @@ namespace CryptoCL {
 			}
 			
 			unsigned int RoundKey::Rounds() const {
+				unsigned int retVal = 0;
+				
 				switch ( mSize ) {
 					case Key::None:
-						return 0;
+						retVal = 0;
 						break;
 					case Key::Bit128:
-						return 10;
+						retVal = 10;
 						break;
 					case Key::Bit192:
-						return 12;
+						retVal = 12;
 						break;
 					case Key::Bit256:
-						return 14;
+						retVal = 14;
 						break;
 				}
+				
+				return retVal;
 			}
 			
 			const Key::KeySize RoundKey::Size() const {
