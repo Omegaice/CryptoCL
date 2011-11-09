@@ -23,7 +23,7 @@ namespace CryptoCL {
 				public:
 					enum EDevice { CPU, GPU };
 				protected:
-					EDevice mDevice;
+					EDevice mDeviceType;
 					tqd::Compute::OpenCL::Queue *mQueue;
 					tqd::Compute::OpenCL::Context *mContext;
 					tqd::Compute::OpenCL::Program *mEncryption, *mDecryption, *mDecryptionCBC;

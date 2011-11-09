@@ -116,16 +116,21 @@ __kernel void decryptCBCUnoptimized( __global const uchar *rkey, __global const 
 	for( uint i = 0; i < 16; i++ ) result[startPos+i] = block[i];
 }
 
-__kernel void decryptCBC( __global const uchar *rkey, __global const uchar *data, __global const uchar *previous, __global uchar *result, const uint rounds ) {
-	const uint idx = get_global_id( 0 );
-	const uint startPos = 16 * idx;
+__kernel void decryptCBC( __constant const uchar *rkey, __global const uchar *data, 
+	__constant const uchar *previous, __global uchar *result, const uint blocks, 
+	const uint rounds ) {
 	
-	// Create Block + Add Round Key
+	const size_t idx = get_global_id( 0 );
+	if( idx > blocks ) return;
+	
+	const size_t startPos = 16 * idx;
+	
+	// Create Block
 	uchar block[16];
-	for( uint i = 0; i < 16; i++) block[i] = data[startPos+i] ^ rkey[rounds*16+i];
+	for( uint i = 0; i < 16; i++) block[i] = data[startPos+i];
 	
-	// 
-	for( uint i = 0; i < 16; i++ ) block[i] = block[i] ;
+	// Add Round Key
+	for( uint i = 0; i < 16; i++ ) block[i] = block[i] ^ rkey[rounds*16+i];
 		
 	// Calculate Rounds
 	for( uint j = rounds - 1; j > 0; j-- ){
@@ -139,7 +144,7 @@ __kernel void decryptCBC( __global const uchar *rkey, __global const uchar *data
 			unsigned int k = (i - (i % 4 * 4)) % 16;
 			block[i] = tempd[k];
 		}
-	
+		
 		// Inverse Sub Bytes + Add Round Key
 		for( uint i = 0; i < 16; i++ ) block[i] = InvSBox[block[i]] ^ rkey[jPos+i];
 		
@@ -165,6 +170,9 @@ __kernel void decryptCBC( __global const uchar *rkey, __global const uchar *data
 		block[i] = temp[k];
 	}
 	
-	// Add Round Key + XOR with previous + Copy Result
-	for( uint i = 0; i < 16; i++ ) result[startPos+i] = block[i] ^ rkey[i] ^ previous[startPos+i];
+	// Add Round Key + XOR with previous
+	for( uint i = 0; i < 16; i++ ) block[i] = ( block[i] ^ rkey[i] ) ^ previous[startPos+i];
+	
+	// Copy Result
+	for( uint i = 0; i < 16; i++ ) result[startPos+i] = block[i];
 }
