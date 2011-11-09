@@ -19,7 +19,10 @@ namespace CryptoCL {
 				BlockCipher( const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
 				
 				const Mode::BlockMode& Mode() const;
+				void Mode( const Mode::BlockMode& mode );
+				
 				const DataArray& InitialisationVector() const;
+				void InitialisationVector( const DataArray& iv );
 		};
 	}
 }
