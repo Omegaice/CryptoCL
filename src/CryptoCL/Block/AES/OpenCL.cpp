@@ -253,7 +253,11 @@ namespace CryptoCL {
 							throw std::exception();
 						}
 
-						mQueue->RangeKernel( kernel, blockCount );
+						if( blockCount % 2 != 0 ) {
+							mQueue->RangeKernel( kernel, blockCount + 1 );
+						}else{
+							mQueue->RangeKernel( kernel, blockCount );
+						}
 					}
 					
 					mQueue->ReadBuffer( Result, sizeof( char ) * inData.size(), &result[0] );
