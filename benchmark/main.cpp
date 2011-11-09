@@ -16,28 +16,27 @@ void PrintResult( std::ostream& stream, timeval tStart, timeval tEnd ){
 	stream << tDiff << " ";
 }
 
-void Benchmark( const std::string& name, const DataArray& data, CryptoCL::Cipher& cipher ){
-	std::string fileName = "results_" + name + ".txt";
+void PrintTotal( std::ostream& stream, std::string name, timeval tStart, timeval tEnd ){
+	long tDiff = ( ( tEnd.tv_sec - tStart.tv_sec ) * 1000 + ( (tEnd.tv_usec - tStart.tv_usec) / 1000.0 ) ) + 0.5;
+	
+	stream << name << " completed in " << tDiff << "ms" << std::endl;;
+}
+
+void BenchmarkEncryption( const std::string& name, const DataArray& data, CryptoCL::Cipher& cipher ){
+	std::string fileName = "results_" + name + "_encryption.txt";
 	std::ofstream stream( fileName.c_str() );
-	
-	const size_t dataSize = data.size();
-	
-	timeval tStart, tEnd, tStartTotal, tEndTotal;
-	
+
+	timeval tStart, tEnd, tStartTotal;	
 	gettimeofday( &tStartTotal, 0 );
 	
 	unsigned int size = 16;
-	while( size < dataSize ){
+	while( size < data.size() ){
 		stream << size << " ";
 		
-		gettimeofday( &tStart, 0 );
-		const DataArray encrypted = cipher.Encrypt( DataArray( data.begin(), data.begin() + size ) );
-		gettimeofday( &tEnd, 0 );
+		const DataArray dData( data.begin(), data.begin() + size );
 		
-		PrintResult(stream, tStart, tEnd);
-	
 		gettimeofday( &tStart, 0 );
-		const DataArray decrypted = cipher.Decrypt( encrypted );
+		const DataArray encrypted = cipher.Encrypt( dData );
 		gettimeofday( &tEnd, 0 );
 		
 		PrintResult(stream, tStart, tEnd);
@@ -47,19 +46,60 @@ void Benchmark( const std::string& name, const DataArray& data, CryptoCL::Cipher
 		size += 16;
 	}
 	
+	timeval tEndTotal;
 	gettimeofday( &tEndTotal, 0 );
 	
-	stream.close();
-	
-	long tDiff = ( ( tEndTotal.tv_sec - tStartTotal.tv_sec ) * 1000 + ( (tEndTotal.tv_usec - tStartTotal.tv_usec) / 1000.0 ) ) + 0.5;
-	std::cout << name << " completed in " << tDiff << "ms" << std::endl;
+	PrintTotal( std::cout, name + "_encryption", tStartTotal, tEndTotal );
 }
 
-int main() {
-	const unsigned int dataSize = 16*1024;
+void BenchmarkDecryption( const std::string& name, const DataArray& data, CryptoCL::Cipher& cipher ){
+	std::string fileName = "results_" + name + "_decryption.txt";
+	std::ofstream stream( fileName.c_str() );
+
+	timeval tStart, tEnd, tStartTotal;	
+	gettimeofday( &tStartTotal, 0 );
 	
-	std::vector<unsigned char> data;
-	data.resize( dataSize );
+	unsigned int size = 16;
+	while( size < data.size() ){
+		stream << size << " ";
+		
+		const DataArray eData( data.begin(), data.begin() + size );
+		
+		gettimeofday( &tStart, 0 );
+		const DataArray dData = cipher.Decrypt( eData );
+		gettimeofday( &tEnd, 0 );
+		
+		PrintResult(stream, tStart, tEnd);
+		
+		stream << std::endl;
+		
+		size += 16;
+	}
+	
+	timeval tEndTotal;
+	gettimeofday( &tEndTotal, 0 );
+	
+	PrintTotal( std::cout, name+ "_decryption", tStartTotal, tEndTotal );
+}
+
+enum Mode{ Encryption, Decryption, Both };
+
+void Benchmark( const Mode mode, const std::string& name, const DataArray& data, CryptoCL::Cipher& cipher ){
+	if( mode == Encryption || mode == Both ) BenchmarkEncryption( name, data, cipher );
+	const DataArray eData = cipher.Encrypt( data );
+	if( mode == Decryption || mode == Both ) BenchmarkDecryption( name, eData, cipher );
+}
+
+int main( int argc, char* argv[] ) {
+	const unsigned int dataSize = 16*1024;
+	DataArray data( dataSize );
+	
+	Mode mode = Both;
+	
+	if( argc > 1 ){
+		if( std::string( argv[1] ) == "-enc" ) mode = Encryption;
+		if( std::string( argv[1] ) == "-dec" ) mode = Decryption;
+	}
 	
 	srand( time(0) );
 	for( unsigned int i = 0; i < dataSize; i++ ){
@@ -80,32 +120,32 @@ int main() {
 	Reference cipher;
 	cipher.Initialise( rKey );
 	
-	Benchmark("reference", data, cipher);
+	Benchmark(mode, "reference", data, cipher);
 	
 	Reference cipherCBC( Block::Mode::CipherBlockChaining, DataArray( iv, iv + 16 ) );
 	cipherCBC.Initialise( rKey );
 	
-	Benchmark("reference_cbc", data, cipherCBC);
+	Benchmark(mode, "reference_cbc", data, cipherCBC);
 	
 	OpenCL cpuCipher( OpenCL::CPU );
 	cpuCipher.Initialise( rKey );
 	
-	Benchmark("opencl_cpu", data, cpuCipher );
+	Benchmark(mode, "opencl_cpu", data, cpuCipher );
 	
 	OpenCL cpuCipherCBC( OpenCL::CPU, Block::Mode::CipherBlockChaining, DataArray( iv, iv + 16 ) );
 	cpuCipherCBC.Initialise( rKey );
 	
-	Benchmark("opencl_cpu_cbc", data, cpuCipherCBC );
+	Benchmark(mode, "opencl_cpu_cbc", data, cpuCipherCBC );
 	
 	OpenCL gpuCipher( OpenCL::GPU );
 	gpuCipher.Initialise( rKey );
 	
-	Benchmark("opencl_gpu", data, gpuCipher );
+	Benchmark(mode, "opencl_gpu", data, gpuCipher );
 	
 	OpenCL gpuCipherCBC( OpenCL::GPU, Block::Mode::CipherBlockChaining, DataArray( iv, iv + 16 ) );
 	gpuCipherCBC.Initialise( rKey );
 	
-	Benchmark("opencl_gpu_cbc", data, gpuCipherCBC );
+	Benchmark(mode, "opencl_gpu_cbc", data, gpuCipherCBC );
 		
 	return 0;
 } 
