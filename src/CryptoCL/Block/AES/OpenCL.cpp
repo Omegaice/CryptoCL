@@ -108,28 +108,16 @@ namespace CryptoCL {
 				mQueue = new Queue( *mContext, device );
 				
 				// Encryption 
-				std::ifstream eFile( "data/aes_encrypt.cl" );
-				std::string eSource( ( std::istreambuf_iterator<char> ( eFile ) ), std::istreambuf_iterator<char>() );
-				
-				if( eSource.empty() ) exit( EXIT_FAILURE );
-				
-				mEncryption = new Program( *mContext, device, eSource );
+				mEncryption = new Program( CreateProgramFromFile( *mContext, device, "data/aes_encrypt.cl" ) );
+				if( !mEncryption->isValid() ) exit( EXIT_FAILURE );
 				
 				// Decryption 
-				std::ifstream dFile( "data/aes_decrypt.cl" );
-				std::string dSource( ( std::istreambuf_iterator<char> ( dFile ) ), std::istreambuf_iterator<char>() );
-				
-				if( dSource.empty() ) exit( EXIT_FAILURE );
-				
-				mDecryption = new Program( *mContext, device, dSource );
-				
+				mDecryption = new Program( CreateProgramFromFile( *mContext, device, "data/aes_decrypt.cl" ) );
+				if( !mDecryption->isValid() ) exit( EXIT_FAILURE );
+							
 				// Decryption 
-				std::ifstream dFileCBC( "data/aes_decryptCBC.cl" );
-				std::string dSourceCBC( ( std::istreambuf_iterator<char> ( dFileCBC ) ), std::istreambuf_iterator<char>() );
-				
-				if( dSourceCBC.empty() ) exit( EXIT_FAILURE );
-				
-				mDecryptionCBC = new Program( *mContext, device, dSourceCBC );
+				mDecryptionCBC = new Program( CreateProgramFromFile( *mContext, device, "data/aes_decryptCBC.cl", "-cl-mad-enable" ) );
+				if( !mDecryptionCBC->isValid() ) exit( EXIT_FAILURE );
 			}
 						
 			const DataArray OpenCL::Encrypt( const DataArray& data ) {
