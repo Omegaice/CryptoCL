@@ -24,19 +24,65 @@ namespace CryptoCL {
 				return "Selected OpenCL Device Unavailiable";
 			}
 			
-			OpenCL::OpenCL( const EDevice device, const Mode::BlockMode mode, const DataArray& iv ) 
-				: AESBlockCipher( mode, iv ), mDeviceType( device ), mQueue( 0 ),
-				mContext( 0 ), mEncryption( 0 ), mDecryption( 0 ), mDecryptionCBC( 0 ),
-				mPlatformList( new PlatformList ) {
+			OpenCL::OpenCL( const EDevice deviceType, const Mode::BlockMode mode, const DataArray& iv ) 
+				: AESBlockCipher( mode, iv ), mQueue( 0 ), mContext( 0 ), 
+					mEncryption( 0 ), mDecryption( 0 ), mDecryptionCBC( 0 ) {
+				
+				cl_device_type devType = 0;
+				switch( deviceType ){
+					case CPU:
+						devType = CL_DEVICE_TYPE_CPU;
+						break;
+					case GPU:
+						devType = CL_DEVICE_TYPE_GPU;
+						break;
+				};
+				
+				Device device;
+				
+				PlatformList platformList;
+				
+				const unsigned int platforms = platformList.Count();
+				for( unsigned int i = 0; i < platforms; i++ ){
+					DeviceList devList( platformList.GetPlatform( i ) );
+					
+					std::cout << "Platform: " << platformList.GetPlatform( i ).Name() << std::endl;
+					
+					const unsigned int devices = devList.Count();
+					for( unsigned int j = 0; j < devices; j++ ){
+						Device temp = devList.GetDevice( j );
+						
+						std::cout << "\tDevice: " << temp.InfoString( CL_DEVICE_NAME ) << std::endl;
+						
+						cl_device_type type;
+						temp.InfoData( CL_DEVICE_TYPE, &type );
+						
+						if( type == devType ) {
+							std::cout << "\t\tSelected" << std::endl;
+							device = temp;
+							break;
+						}else{
+							std::cout << "\t\tIgnored" << std::endl;
+						}
+					}
+				}
+				
+				Setup( device );
+				
+			}
 			
+			OpenCL::OpenCL( Device& device, const Mode::BlockMode mode, const DataArray& iv ) 
+				: AESBlockCipher( mode, iv ), mQueue( 0 ), mContext( 0 ),
+					mEncryption( 0 ), mDecryption( 0 ), mDecryptionCBC( 0 ) {
+			
+				Setup( device );
 			}
 			
 			OpenCL::OpenCL( const OpenCL& other ) 
 				: AESBlockCipher( other.mMode, other.mInitialisationVector ),
-				mDeviceType( other.mDeviceType ), mQueue( other.mQueue ),
-				mContext( other.mContext ), mEncryption( other.mEncryption ),
-				mDecryption( other.mDecryption ), mDecryptionCBC( other.mDecryptionCBC ),
-				mPlatformList( other.mPlatformList ) {
+				mQueue( other.mQueue ), mContext( other.mContext ), 
+				mEncryption( other.mEncryption ), mDecryption( other.mDecryption ), 
+				mDecryptionCBC( other.mDecryptionCBC ) {
 			
 			}
 			
@@ -48,21 +94,17 @@ namespace CryptoCL {
 					mInitialisationVector = other.mInitialisationVector;
 					
 					// OpenCL
-					mDeviceType = other.mDeviceType;
 					mQueue = other.mQueue;
 					mContext = other.mContext;
 					mEncryption = other.mEncryption;
 					mDecryption = other.mDecryption;
 					mDecryptionCBC = other.mDecryptionCBC;
-					mPlatformList = other.mPlatformList;
 				}
 				
 				return *this;
 			}
 			
 			OpenCL::~OpenCL() {
-				delete mPlatformList;
-				
 				if( mEncryption ) delete mEncryption;
 				if( mDecryption ) delete mDecryption;
 				if( mDecryptionCBC ) delete mDecryptionCBC;
@@ -72,38 +114,12 @@ namespace CryptoCL {
 			}
 			
 			void OpenCL::OnInitialise( const RoundKey& key ) {
-				cl_device_type devType = 0;
-				switch( mDeviceType ){
-					case CPU:
-						devType = CL_DEVICE_TYPE_CPU;
-						break;
-					case GPU:
-						devType = CL_DEVICE_TYPE_GPU;
-						break;
-				};
 				
-				Device device;
-				
-				const unsigned int platforms = mPlatformList->Count();
-				for( unsigned int i = 0; i < platforms; i++ ){
-					DeviceList devList( mPlatformList->GetPlatform( i ) );
-					
-					const unsigned int devices = devList.Count();
-					for( unsigned int j = 0; j < devices; j++ ){
-						Device temp = devList.GetDevice( j );
-						
-						cl_device_type type;
-						temp.InfoData( CL_DEVICE_TYPE, &type );
-						
-						if( type == devType ) {
-							device = temp;
-							break;
-						}
-					}
-				}
-				
+			}
+			
+			void OpenCL::Setup( tqd::Compute::OpenCL::Device& device ) {
 				if( !device.isValid() ) throw DeviceUnavailiable();
-								
+				
 				mContext = new Context( device );
 				mQueue = new Queue( *mContext, device );
 				
@@ -221,7 +237,18 @@ namespace CryptoCL {
 
 						mQueue->RangeKernel( kernel, blockCount );
 					}else{
-						Kernel kernel = mDecryptionCBC->GetKernel( "decryptCBC" );
+						Kernel kernel;
+						switch( mKey.Size() ) {
+							case Key::Bit128:
+								kernel = mDecryptionCBC->GetKernel( "decrypt128" );
+								break;
+							case Key::Bit192:
+								kernel = mDecryptionCBC->GetKernel( "decrypt192" );
+								break;
+							case Key::Bit256:
+								kernel = mDecryptionCBC->GetKernel( "decrypt256" );
+								break;
+						}
 						
 						DataArray previous;
 						previous.insert( previous.end(), mInitialisationVector.begin(), mInitialisationVector.end() );
@@ -234,7 +261,6 @@ namespace CryptoCL {
 						paramSuccess |= kernel.Parameter( 2, Previous );
 						paramSuccess |= kernel.Parameter( 3, Result );
 						paramSuccess |= kernel.Parameter( 4, sizeof( cl_uint ), &blockCount );
-						paramSuccess |= kernel.Parameter( 5, sizeof( cl_uint ), &rCount );
 						
 						if( !paramSuccess ) {
 							std::cerr << "Parameters Invalid" << std::endl;

@@ -7,11 +7,10 @@
 namespace tqd{
 	namespace Compute{
 		namespace OpenCL{
-			class Context;
-			class Buffer;
 			class Queue;
+			class Device;
 			class Program;
-			class PlatformList;
+			class Context;
 		}
 	}
 }
@@ -23,13 +22,12 @@ namespace CryptoCL {
 				public:
 					enum EDevice { CPU, GPU };
 				protected:
-					EDevice mDeviceType;
 					tqd::Compute::OpenCL::Queue *mQueue;
 					tqd::Compute::OpenCL::Context *mContext;
 					tqd::Compute::OpenCL::Program *mEncryption, *mDecryption, *mDecryptionCBC;
-					tqd::Compute::OpenCL::PlatformList *mPlatformList;
 				public:
-					OpenCL( const EDevice device, const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
+					OpenCL( const EDevice deviceType, const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
+					OpenCL( tqd::Compute::OpenCL::Device& device, const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
 					
 					OpenCL( const OpenCL& other );
 					OpenCL& operator=( const OpenCL& other );
@@ -40,6 +38,7 @@ namespace CryptoCL {
 					const DataArray Decrypt( const DataArray& data );
 				protected:
 					void OnInitialise( const RoundKey& key );
+					void Setup( tqd::Compute::OpenCL::Device& device );
 			};
 			
 			struct DeviceUnavailiable : public std::exception {

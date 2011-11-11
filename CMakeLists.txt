@@ -99,6 +99,12 @@ if( BUILD_TESTING )
 	add_subdirectory( "test" )
 endif( BUILD_TESTING )
 
+# MemTest
+option( BUILD_MEM_TESTING "Build memory test code" Off )
+if( BUILD_MEM_TESTING )
+	add_subdirectory( "memtest" )
+endif( BUILD_MEM_TESTING )
+
 # Testing
 option( BUILD_BENCHMARK "Build benchmark code" Off )
 if( BUILD_BENCHMARK )
