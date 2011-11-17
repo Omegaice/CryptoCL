@@ -1,6 +1,7 @@
 #ifndef CRYPTOCL_AES_OPENCL_H_
 #define CRYPTOCL_AES_OPENCL_H_
 
+#include <map>
 #include <exception>
 #include "CryptoCL/Block/AES/AESBlockCipher.h"
 
@@ -24,7 +25,8 @@ namespace CryptoCL {
 				protected:
 					tqd::Compute::OpenCL::Queue *mQueue;
 					tqd::Compute::OpenCL::Context *mContext;
-					tqd::Compute::OpenCL::Program *mEncryption, *mDecryption, *mDecryptionCBC;
+					std::map<Mode::BlockMode,tqd::Compute::OpenCL::Program> mEncryption;
+					std::map<Mode::BlockMode,tqd::Compute::OpenCL::Program> mDecryption;
 				public:
 					OpenCL( const EDevice deviceType, const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
 					OpenCL( tqd::Compute::OpenCL::Device& device, const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
