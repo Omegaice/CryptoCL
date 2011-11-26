@@ -16,7 +16,7 @@ if( NOT BUILD_OPENCL )
 endif( NOT BUILD_OPENCL )
 
 # Build
-add_executable( cryptocl_benchmark main.cpp ${TEST_SOURCES} ${TEST_HEADERS} )
+add_executable( cryptocl_benchmark main.cpp ${BENCHMARK_SOURCES} ${BENCHMARK_HEADERS} )
 target_link_libraries( cryptocl_benchmark "cryptocl" )
 
 # Copy files

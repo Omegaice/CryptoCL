@@ -133,7 +133,7 @@ namespace CryptoCL {
 			}
 						
 			const DataArray OpenCL::Encrypt( const DataArray& data ) {
-				DataArray result;
+				DataArray result( data.size() );
 				
 				if( isInitialised() ){
 					DataArray inData( data ), roundKey( mKey.Value() );
@@ -176,7 +176,7 @@ namespace CryptoCL {
 						}else{
 							mQueue->RangeKernel( kernel, blockCount );
 						}
-						
+				
 						mQueue->ReadBuffer( Result, sizeof( char ) * inData.size(), &result[0] );
 					}else{
 						const unsigned int blocks = data.size() / 16;
@@ -215,7 +215,9 @@ namespace CryptoCL {
 							DataArray outData( inData.size() );
 							mQueue->ReadBuffer( Result, sizeof( unsigned char ) * outData.size(), &outData[0] );
 							
-							result.insert( result.end(), outData.begin(), outData.end() );
+							for( unsigned int i = 0; i < 16; i++ ){
+								result[sPos+i] = outData[i];
+							}
 						}
 					}
 				}

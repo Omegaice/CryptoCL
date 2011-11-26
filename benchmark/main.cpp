@@ -1,80 +1,60 @@
+#include <ctime>
 #include <vector>
 #include <fstream>
 #include <cstdlib>
+#include <sstream>
 #include <iostream>
-#include <sys/time.h>
 
+#include "Timer.h"
 #include <CryptoCL/Block/AES/OpenCL.h>
 #include <CryptoCL/Block/AES/Reference.h>
 
 using namespace CryptoCL;
 using namespace CryptoCL::Block::AES;
 
-long MilliSeconds( timeval tStart, timeval tEnd ) {
-	return ( ( tEnd.tv_sec - tStart.tv_sec ) * 1000 + ( (tEnd.tv_usec - tStart.tv_usec) / 1000.0 ) ) + 0.5;
-}
-
-long MicroSeconds( timeval start, timeval end ) {
-	long tS = start.tv_sec*1000000 + (start.tv_usec);
-    long tE = end.tv_sec*1000000  + (end.tv_usec);
-	
-	return tE - tS;
-}
-
-void PrintResult( std::ostream& stream, double time ){
-	stream << time << " ";
-}
-
-void PrintTotal( std::ostream& stream, std::string name, timeval tStart, timeval tEnd ){
-	long tDiff = ( ( tEnd.tv_sec - tStart.tv_sec ) * 1000 + ( (tEnd.tv_usec - tStart.tv_usec) / 1000.0 ) ) + 0.5;
-	
-	stream << name << " completed in " << tDiff << "ms" << std::endl;;
-}
-
 const unsigned int AverageIterations = 10;
 
 void BenchmarkEncryption( const std::string& name, const DataArray& data, CryptoCL::Cipher& cipher ){
-	std::string fileName = "results_" + name + "_encryption.txt";
-	std::ofstream stream( fileName.c_str() );
+	std::ostringstream fileName;
+	fileName << "results_" << name << "_encryption.txt";
 
-	timeval tStart, tEnd, tStartTotal;	
-	gettimeofday( &tStartTotal, 0 );
+	std::ofstream stream( fileName.str().c_str() );
+
+	Timer totalTime, loopTime;
+	totalTime.start();
 	
 	unsigned int size = 16;
 	while( size < data.size() ){
-		stream << size << " ";
-		
 		const DataArray dData( data.begin(), data.begin() + size );
 		
 		double average = 0.0;
 		for( unsigned int i = 0; i < AverageIterations; i++ ){
-			gettimeofday( &tStart, 0 );
+			loopTime.start();
 			const DataArray encrypted = cipher.Encrypt( dData );
-			gettimeofday( &tEnd, 0 );
+			loopTime.stop();
 			
-			average += MicroSeconds( tStart, tEnd );
+			average += loopTime.getElapsedTimeInMilliSec();
 		}
 		average /= AverageIterations;
-		
-		stream << size << " ";
-		PrintResult( stream, average );
-		stream << std::endl;
+
+		stream << size << " " << average << std::endl;
 		
 		size += 16;
 	}
 	
-	timeval tEndTotal;
-	gettimeofday( &tEndTotal, 0 );
+	totalTime.stop();
 	
-	PrintTotal( std::cout, name + "_encryption", tStartTotal, tEndTotal );
+	std::cout << name << "_encryption completed in " << totalTime.getElapsedTimeInMilliSec() << "ms" << std::endl;
 }
 
 void BenchmarkDecryption( const std::string& name, const DataArray& data, CryptoCL::Cipher& cipher ){
-	std::string fileName = "results_" + name + "_decryption.txt";
-	std::ofstream stream( fileName.c_str() );
+	std::ostringstream fileName;
+	fileName << "results_" << name << "_decryption.txt";
 
-	timeval tStart, tEnd, tStartTotal;	
-	gettimeofday( &tStartTotal, 0 );
+	std::ofstream stream( fileName.str().c_str() );
+
+	Timer totalTime, loopTime;
+	totalTime.start();
 	
 	unsigned int size = 16;
 	while( size < data.size() ){
@@ -82,25 +62,22 @@ void BenchmarkDecryption( const std::string& name, const DataArray& data, Crypto
 		
 		double average = 0.0;
 		for( unsigned int i = 0; i < AverageIterations; i++ ){
-			gettimeofday( &tStart, 0 );
+			loopTime.start();
 			const DataArray decrypted = cipher.Decrypt( eData );
-			gettimeofday( &tEnd, 0 );
+			loopTime.stop();
 			
-			average += MicroSeconds( tStart, tEnd );
+			average += loopTime.getElapsedTimeInMilliSec();
 		}
 		average /= AverageIterations;
 		
-		stream << size << " ";
-		PrintResult( stream, average );
-		stream << std::endl;
+		stream << size << " " << average << std::endl;
 		
 		size += 16;
 	}
+
+	totalTime.stop();
 	
-	timeval tEndTotal;
-	gettimeofday( &tEndTotal, 0 );
-	
-	PrintTotal( std::cout, name+ "_decryption", tStartTotal, tEndTotal );
+	std::cout << name << "_decryption completed in " << totalTime.getElapsedTimeInMilliSec() << "ms" << std::endl;
 }
 
 enum Mode{ Encryption, Decryption, Both };
@@ -122,7 +99,7 @@ int main( int argc, char* argv[] ) {
 		if( std::string( argv[1] ) == "-dec" ) mode = Decryption;
 	}
 	
-	srand( time(0) );
+	srand( std::time(0) );
 	for( unsigned int i = 0; i < dataSize; i++ ){
 		data[i] = rand();
 	}

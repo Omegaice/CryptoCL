@@ -53,200 +53,136 @@ uchar gmul(uchar a, uchar b) {
 
 #define BlockSize 16
 
-__kernel void encrypt128( __constant const uchar *rkey, __global const uchar *data,
-	__global uchar *result, const uint blocks ) {
+void AddRoundKey( __global const uchar *rkey, uchar *block, uchar round ) {
+	const size_t rPos = round * BlockSize;
+	for( uint i = 0; i < BlockSize; i++ ) block[i] ^= rkey[rPos+i];
+}
+
+void SubBytes( uchar* block ){
+	for( uint i = 0; i < BlockSize; i++) block[i] = SBox[block[i]];
+}
+
+void ShiftRows( uchar *temp, uchar *block ) {
+	for( uint i = 0; i < BlockSize; i++) temp[i] = block[i];
+		
+	for (uint i = 0; i < BlockSize; i++) {
+		uint k = (i + ( (i % 4) * 4)) % BlockSize;
+		block[i] = temp[k];
+	}
+}
+
+void MixColumn( uchar* column, uint pos ) {
+	const uchar cZero = gmul(column[pos+0],2), cOne = gmul(column[pos+1],2), cTwo = gmul(column[pos+2],2), cThree = gmul(column[pos+3],2);
+				
+	const uchar a = cZero  ^ column[pos+3] ^ column[pos+2] ^ cOne   ^ column[pos+1];
+	const uchar b = cOne   ^ column[pos+0] ^ column[pos+3] ^ cTwo   ^ column[pos+2];
+	const uchar c = cTwo   ^ column[pos+1] ^ column[pos+0] ^ cThree ^ column[pos+3];
+	const uchar d = cThree ^ column[pos+2] ^ column[pos+1] ^ cZero  ^ column[pos+0];
 	
+	column[pos+0] = a; column[pos+1] = b; column[pos+2] = c; column[pos+3] = d;
+}
+
+void MixColumns( uchar* block ) {
+	MixColumn( block, 0 );
+	MixColumn( block, 4 );
+	MixColumn( block, 8 );
+	MixColumn( block, 12 );
+}
+
+__kernel void encrypt128( __global const uchar *rkey, __global const uchar *data, __global uchar *result, const uint blocks ) {
 	const size_t idx = get_global_id( 0 );
 	if( idx > blocks ) return;
 	
 	const size_t startPos = BlockSize * idx;
 	
-	/* Create Block */
+	// Create Block
 	uchar block[BlockSize], temp[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
-		
-	/* Add Round Key */
-	for( uint i = 0; i < BlockSize; i++) block[i] = block[i] ^ rkey[i];
+	for( uint i = 0; i < BlockSize; i++) {
+		block[i] = data[startPos+i];
+	}
 	
-	/* Calculate Rounds */
+	AddRoundKey( rkey, block, 0 );
+	
+	// Calculate Rounds
 	for( uint j = 1; j < 10; j++ ){
-		const uint jPos = j * BlockSize;
-		
-		/* Sub Bytes */
-		for( uint i = 0; i < BlockSize; i++) block[i] = SBox[block[i]];
-		
-		/* Shift Rows */
-		for( uint i = 0; i < BlockSize; i++) temp[i] = block[i];
-		
-		for (uint i = 0; i < BlockSize; i++) {
-			uint k = (i + ( (i % 4) * 4)) % BlockSize;
-			block[i] = temp[k];
-		}
-	
-		/* Mix Columns + Add Key */
-		for( uint col = 0; col < 4; col++ ){
-			const uint colPos = col * 4;
-			
-			const uchar cZero = gmul(block[colPos+0], 2), cOne = gmul(block[colPos+1], 2), cTwo = gmul(block[colPos+2], 2), cThree = gmul(block[colPos+3], 2);
-			
-			const uchar a = cZero  ^ block[colPos+3] ^ block[colPos+2] ^ cOne   ^ block[colPos+1];
-			const uchar b = cOne   ^ block[colPos+0] ^ block[colPos+3] ^ cTwo   ^ block[colPos+2];
-			const uchar c = cTwo   ^ block[colPos+1] ^ block[colPos+0] ^ cThree ^ block[colPos+3];
-			const uchar d = cThree ^ block[colPos+2] ^ block[colPos+1] ^ cZero  ^ block[colPos+0];
-			
-			block[colPos+0] = a; block[colPos+1] = b; block[colPos+2] = c; block[colPos+3] = d;
-		}
-		
-		/* Add Round Key */
-		for( uint i = 0; i < BlockSize; i++) block[i] = block[i] ^ rkey[jPos+i];
-	}
-
-	/* Sub Bytes */
-	for( uint i = 0; i < BlockSize; i++) block[i] = SBox[block[i]];
-	
-	/* Shift Rows */
-	for( uint i = 0; i < BlockSize; i++) temp[i] = block[i];
-	
-	for (uint i = 0; i < BlockSize; i++) {
-		uint k = (i + ( (i % 4) * 4)) % BlockSize;
-		block[i] = temp[k];
+		SubBytes( block );
+		ShiftRows( temp, block );
+		MixColumns( block );
+		AddRoundKey( rkey, block, j );
 	}
 	
-	/* Add Round Key */
-	for (uint i = 0; i < BlockSize; i++) block[i] = block[i] ^ rkey[10*BlockSize+i];
+	SubBytes( block );
+	ShiftRows( temp, block );
+	AddRoundKey( rkey, block, 10 );
 		
-	/* Copy Result */
-	for( uint i = 0; i < BlockSize; i++ ) result[startPos+i] = block[i];
+	// Copy Result
+	for( uint i = 0; i < BlockSize; i++ ) {
+		result[startPos+i] = block[i];
+	}
 }
 
-__kernel void encrypt192( __constant const uchar *rkey, __global const uchar *data, 
-	__global uchar *result, const uint blocks ) {
+__kernel void encrypt192( __global const uchar *rkey, __global const uchar *data, __global uchar *result, const uint blocks ) {
 		
 	const size_t idx = get_global_id( 0 );
 	if( idx > blocks ) return;
 	
 	const size_t startPos = BlockSize * idx;
 	
-	/* Create Block */
+	// Create Block
 	uchar block[BlockSize], temp[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
-		
-	/* Add Round Key */
-	for( uint i = 0; i < BlockSize; i++) block[i] = block[i] ^ rkey[i];
+	for( uint i = 0; i < BlockSize; i++) {
+		block[i] = data[startPos+i];
+	}
 	
-	/* Calculate Rounds */
+	AddRoundKey( rkey, block, 0 );
+	
+	// Calculate Rounds
 	for( uint j = 1; j < 12; j++ ){
-		const uint jPos = j * BlockSize;
-		
-		/* Sub Bytes */
-		for( uint i = 0; i < BlockSize; i++) block[i] = SBox[block[i]];
-		
-		/* Shift Rows */
-		for( uint i = 0; i < BlockSize; i++) temp[i] = block[i];
-		
-		for (uint i = 0; i < BlockSize; i++) {
-			uint k = (i + ( (i % 4) * 4)) % BlockSize;
-			block[i] = temp[k];
-		}
-	
-		/* Mix Columns + Add Key */
-		for( uint col = 0; col < 4; col++ ){
-			const uint colPos = col * 4;
-			
-			const uchar cZero = gmul(block[colPos+0], 2), cOne = gmul(block[colPos+1], 2), cTwo = gmul(block[colPos+2], 2), cThree = gmul(block[colPos+3], 2);
-			
-			const uchar a = cZero  ^ block[colPos+3] ^ block[colPos+2] ^ cOne   ^ block[colPos+1];
-			const uchar b = cOne   ^ block[colPos+0] ^ block[colPos+3] ^ cTwo   ^ block[colPos+2];
-			const uchar c = cTwo   ^ block[colPos+1] ^ block[colPos+0] ^ cThree ^ block[colPos+3];
-			const uchar d = cThree ^ block[colPos+2] ^ block[colPos+1] ^ cZero  ^ block[colPos+0];
-			
-			block[colPos+0] = a; block[colPos+1] = b; block[colPos+2] = c; block[colPos+3] = d;
-		}
-		
-		/* Add Round Key */
-		for( uint i = 0; i < BlockSize; i++) block[i] = block[i] ^ rkey[jPos+i];
-	}
-
-	/* Sub Bytes */
-	for( uint i = 0; i < BlockSize; i++) block[i] = SBox[block[i]];
-	
-	/* Shift Rows */
-	for( uint i = 0; i < BlockSize; i++) temp[i] = block[i];
-	
-	for (uint i = 0; i < BlockSize; i++) {
-		uint k = (i + ( (i % 4) * 4)) % BlockSize;
-		block[i] = temp[k];
+		SubBytes( block );
+		ShiftRows( temp, block );
+		MixColumns( block );
+		AddRoundKey( rkey, block, j );
 	}
 	
-	/* Add Round Key */
-	for (uint i = 0; i < BlockSize; i++) block[i] = block[i] ^ rkey[12*BlockSize+i];
+	SubBytes( block );
+	ShiftRows( temp, block );
+	AddRoundKey( rkey, block, 12 );
 		
-	/* Copy Result */
-	for( uint i = 0; i < BlockSize; i++ ) result[startPos+i] = block[i];
+	// Copy Result
+	for( uint i = 0; i < BlockSize; i++ ) {
+		result[startPos+i] = block[i];
+	}
 }
 
-__kernel void encrypt256( __constant const uchar *rkey, __global const uchar *data,
-	__global uchar *result, const uint blocks ) {
+__kernel void encrypt256( __global const uchar *rkey, __global const uchar *data, __global uchar *result, const uint blocks ) {
 	
 	const size_t idx = get_global_id( 0 );
 	if( idx > blocks ) return;
 	
 	const size_t startPos = BlockSize * idx;
 	
-	/* Create Block */
+	// Create Block
 	uchar block[BlockSize], temp[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
-		
-	/* Add Round Key */
-	for( uint i = 0; i < BlockSize; i++) block[i] = block[i] ^ rkey[i];
+	for( uint i = 0; i < BlockSize; i++) {
+		block[i] = data[startPos+i];
+	}
 	
-	/* Calculate Rounds */
+	AddRoundKey( rkey, block, 0 );
+	
+	// Calculate Rounds
 	for( uint j = 1; j < 14; j++ ){
-		const uint jPos = j * BlockSize;
-		
-		/* Sub Bytes */
-		for( uint i = 0; i < BlockSize; i++) block[i] = SBox[block[i]];
-		
-		/* Shift Rows */
-		for( uint i = 0; i < BlockSize; i++) temp[i] = block[i];
-		
-		for (uint i = 0; i < BlockSize; i++) {
-			uint k = (i + ( (i % 4) * 4)) % BlockSize;
-			block[i] = temp[k];
-		}
-	
-		/* Mix Columns + Add Key */
-		for( uint col = 0; col < 4; col++ ){
-			const uint colPos = col * 4;
-			
-			const uchar cZero = gmul(block[colPos+0], 2), cOne = gmul(block[colPos+1], 2), cTwo = gmul(block[colPos+2], 2), cThree = gmul(block[colPos+3], 2);
-			
-			const uchar a = cZero  ^ block[colPos+3] ^ block[colPos+2] ^ cOne   ^ block[colPos+1];
-			const uchar b = cOne   ^ block[colPos+0] ^ block[colPos+3] ^ cTwo   ^ block[colPos+2];
-			const uchar c = cTwo   ^ block[colPos+1] ^ block[colPos+0] ^ cThree ^ block[colPos+3];
-			const uchar d = cThree ^ block[colPos+2] ^ block[colPos+1] ^ cZero  ^ block[colPos+0];
-			
-			block[colPos+0] = a; block[colPos+1] = b; block[colPos+2] = c; block[colPos+3] = d;
-		}
-		
-		/* Add Round Key */
-		for( uint i = 0; i < BlockSize; i++) block[i] = block[i] ^ rkey[jPos+i];
-	}
-
-	/* Sub Bytes */
-	for( uint i = 0; i < BlockSize; i++) block[i] = SBox[block[i]];
-	
-	/* Shift Rows */
-	for( uint i = 0; i < BlockSize; i++) temp[i] = block[i];
-	
-	for (uint i = 0; i < BlockSize; i++) {
-		uint k = (i + ( (i % 4) * 4)) % BlockSize;
-		block[i] = temp[k];
+		SubBytes( block );
+		ShiftRows( temp, block );
+		MixColumns( block );
+		AddRoundKey( rkey, block, j );
 	}
 	
-	/* Add Round Key */
-	for (uint i = 0; i < BlockSize; i++) block[i] = block[i] ^ rkey[14*BlockSize+i];
+	SubBytes( block );
+	ShiftRows( temp, block );
+	AddRoundKey( rkey, block, 14 );
 		
-	/* Copy Result */
-	for( uint i = 0; i < BlockSize; i++ ) result[startPos+i] = block[i];
+	// Copy Result
+	for( uint i = 0; i < BlockSize; i++ ) {
+		result[startPos+i] = block[i];
+	}
 }

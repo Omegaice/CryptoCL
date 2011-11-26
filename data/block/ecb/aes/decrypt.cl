@@ -129,7 +129,7 @@ uchar gmul(uchar a, uchar b) {
 
 #define BlockSize 16
 
-__kernel void decrypt128( __constant const uchar *rkey, __global const uchar *data,
+__kernel void decrypt128( __global const uchar *rkey, __global const uchar *data,
 	__global uchar *result, const uint blocks ) {
 	
 	const size_t idx = get_global_id( 0 );
@@ -188,7 +188,7 @@ __kernel void decrypt128( __constant const uchar *rkey, __global const uchar *da
 	}
 }
 
-__kernel void decrypt192( __constant const uchar *rkey, __global const uchar *data, 
+__kernel void decrypt192( __global const uchar *rkey, __global const uchar *data, 
 	__global uchar *result, const uint blocks ) {
 		
 	const size_t idx = get_global_id( 0 );
@@ -247,7 +247,7 @@ __kernel void decrypt192( __constant const uchar *rkey, __global const uchar *da
 	}
 }
 
-__kernel void decrypt256( __constant const uchar *rkey, __global const uchar *data,
+__kernel void decrypt256( __global const uchar *rkey, __global const uchar *data,
 	__global uchar *result, const uint blocks ) {
 	
 	const size_t idx = get_global_id( 0 );
