@@ -159,11 +159,7 @@ namespace CryptoCL {
 							throw std::exception();
 						}
 
-						if( blockCount % 2 != 0 ) {
-							mQueue->RangeKernel( kernel, blockCount + 1 );
-						}else{
-							mQueue->RangeKernel( kernel, blockCount );
-						}
+						mQueue->RangeKernel( kernel, ( blockCount % 2 == 0 ) ? blockCount : ( blockCount + 1 ) );
 				
 						mQueue->ReadBuffer( Result, sizeof( char ) * inData.size(), &result[0] );
 					}else{
@@ -218,54 +214,36 @@ namespace CryptoCL {
 				DataArray result( data.size() );
 				
 				if( isInitialised() ) {
-					const unsigned int Rounds = mKey.Rounds();
-					DataArray inData( data ), roundKey( mKey.Value() );
+					const unsigned int Rounds = mKey.Rounds(), Blocks = data.size() / 16;
 					
-					const size_t blockCount = inData.size() / 16;
+					ReadOnlyBuffer RoundKey( *mContext, mKey.Value() );
+					ReadOnlyBuffer Input( *mContext, data );
+					WriteOnlyBuffer Result( *mContext, data.size() );
 					
-					ReadOnlyBuffer RoundKey( *mContext, sizeof( unsigned char ) * roundKey.size(), &roundKey[0] );
-					ReadOnlyBuffer Input( *mContext, sizeof( unsigned char ) * inData.size(), &inData[0] );
-					WriteOnlyBuffer Result( *mContext, sizeof( unsigned char ) * inData.size() );
+					ReadOnlyBuffer *Previous = 0;
+					if( mMode == Mode::CipherBlockChaining ){
+						DataArray previous;
+						previous.insert( previous.end(), mInitialisationVector.begin(), mInitialisationVector.end() );
+						previous.insert( previous.end(), data.begin(), data.end() - 16 );
+					
+						Previous = new ReadOnlyBuffer( *mContext, previous );
+					}
 					
 					Kernel kernel = mDecryption[mMode].GetKernel("decrypt");
 						
-					if( mMode != Mode::CipherBlockChaining ){
-						bool paramSuccess = kernel.Parameter( 0, RoundKey );
-						paramSuccess |= kernel.Parameter( 1, sizeof( cl_uint ), &Rounds );
-						paramSuccess |= kernel.Parameter( 2, Input );
-						paramSuccess |= kernel.Parameter( 3, Result );
-						paramSuccess |= kernel.Parameter( 4, sizeof( cl_uint ), &blockCount );
+					int param = 0;
+					kernel.Parameter( param++, RoundKey );
+					kernel.Parameter( param++, sizeof( cl_uint ), &Rounds );
+					kernel.Parameter( param++, Input );
+					if( mMode == Mode::CipherBlockChaining ) kernel.Parameter( param++, *Previous );
+					kernel.Parameter( param++, Result );
+					kernel.Parameter( param++, sizeof( cl_uint ), &Blocks );
 						
-						if( !paramSuccess ) {
-							std::cerr << "Parameters Invalid" << std::endl;
-							throw std::exception();
-						}
-
-						mQueue->RangeKernel( kernel, ( blockCount % 2 == 0 ) ? blockCount : ( blockCount + 1 ) );
-					}else{
-						DataArray previous;
-						previous.insert( previous.end(), mInitialisationVector.begin(), mInitialisationVector.end() );
-						previous.insert( previous.end(), inData.begin(), inData.end() - 16 );
+					Event cipher = mQueue->RangeKernel( kernel, ( Blocks % 2 == 0 ) ? Blocks : ( Blocks + 1 ) );
 					
-						ReadOnlyBuffer Previous( *mContext, sizeof( unsigned char ) * previous.size(), &previous[0] );
-						
-						bool paramSuccess = kernel.Parameter( 0, RoundKey );
-						paramSuccess |= kernel.Parameter( 1, sizeof( cl_uint ), &Rounds );
-						paramSuccess |= kernel.Parameter( 2, Input );
-						paramSuccess |= kernel.Parameter( 3, Previous );
-						paramSuccess |= kernel.Parameter( 4, Result );
-						paramSuccess |= kernel.Parameter( 5, sizeof( cl_uint ), &blockCount );
-						
-						if( !paramSuccess ) {
-							std::cerr << "Parameters Invalid" << std::endl;
-							throw std::exception();
-						}
-						
-						mQueue->RangeKernel( kernel, ( blockCount % 2 == 0 ) ? blockCount : ( blockCount + 1 ) );
-					}
+					mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0] );
 					
-					
-					mQueue->ReadBuffer( Result, sizeof( char ) * inData.size(), &result[0] );
+					if( mMode == Mode::CipherBlockChaining ) delete Previous;
 				}
 				
 				return result;
