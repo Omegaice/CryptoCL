@@ -160,8 +160,8 @@ void InverseMixColumns( uchar* block ) {
 	}
 }
 
-__kernel void decrypt128( __global const uchar *rkey, __global const uchar *data,
-	__global uchar *result, const uint blocks ) {
+__kernel void decrypt( __global const uchar *rkey, const uint rounds, 
+	__global const uchar *data, __global uchar *result, const uint blocks ) {
 	
 	const size_t idx = get_global_id( 0 );
 	if( idx > blocks ) return;
@@ -173,73 +173,9 @@ __kernel void decrypt128( __global const uchar *rkey, __global const uchar *data
 	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
 	
 	// Calculate Result
-	AddRoundKey( rkey, block, 10 );
+	AddRoundKey( rkey, block, rounds );
 	
-	for( uint j = 9; j > 0; --j ){
-		InverseShiftRows( block );
-		InverseSubBytes( block );
-		AddRoundKey( rkey, block, j );
-		InverseMixColumns( block );
-	}
-	
-	InverseSubBytes( block );
-	InverseShiftRows( block );
-	AddRoundKey( rkey, block, 0 );
-	
-	// Store Result
-	for( uint i = 0; i < BlockSize; i++ ) {
-		result[startPos+i] = block[i];
-	}
-}
-
-__kernel void decrypt192( __global const uchar *rkey, __global const uchar *data, 
-	__global uchar *result, const uint blocks ) {
-		
-	const size_t idx = get_global_id( 0 );
-	if( idx > blocks ) return;
-	
-	const size_t startPos = BlockSize * idx;
-	
-	// Create Block
-	uchar block[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
-	
-	// Calculate Result
-	AddRoundKey( rkey, block, 12 );
-	
-	for( uint j = 11; j > 0; --j ){
-		InverseShiftRows( block );
-		InverseSubBytes( block );
-		AddRoundKey( rkey, block, j );
-		InverseMixColumns( block );
-	}
-	
-	InverseSubBytes( block );
-	InverseShiftRows( block );
-	AddRoundKey( rkey, block, 0 );
-	
-	// Store Result
-	for( uint i = 0; i < BlockSize; i++ ) {
-		result[startPos+i] = block[i];
-	}
-}
-
-__kernel void decrypt256( __global const uchar *rkey, __global const uchar *data,
-	__global uchar *result, const uint blocks ) {
-	
-	const size_t idx = get_global_id( 0 );
-	if( idx > blocks ) return;
-	
-	const size_t startPos = BlockSize * idx;
-	
-	// Create Block
-	uchar block[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
-	
-	// Calculate Result
-	AddRoundKey( rkey, block, 14 );
-	
-	for( uint j = 13; j > 0; --j ){
+	for( uint j = rounds - 1; j > 0; --j ){
 		InverseShiftRows( block );
 		InverseSubBytes( block );
 		AddRoundKey( rkey, block, j );

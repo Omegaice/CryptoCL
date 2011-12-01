@@ -229,6 +229,7 @@ namespace CryptoCL {
 				DataArray result( data.size() );
 				
 				if( isInitialised() ) {
+					const unsigned int Rounds = mKey.Rounds();
 					DataArray inData( data ), roundKey( mKey.Value() );
 					
 					const size_t blockCount = inData.size() / 16;
@@ -237,27 +238,14 @@ namespace CryptoCL {
 					Buffer Input( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * inData.size(), &inData[0] );
 					Buffer Result( *mContext, CL_MEM_WRITE_ONLY, sizeof( unsigned char ) * inData.size(), 0 );
 					
-					Kernel kernel;
-					switch( mKey.Size() ) {
-						case Key::Bit128:
-							kernel = mDecryption[mMode].GetKernel( "decrypt128" );
-							break;
-						case Key::Bit192:
-							kernel = mDecryption[mMode].GetKernel( "decrypt192" );
-							break;
-						case Key::Bit256:
-							kernel = mDecryption[mMode].GetKernel( "decrypt256" );
-							break;
-						case Key::None:
-							return data;
-							break;
-					}
+					Kernel kernel = mDecryption[mMode].GetKernel("decrypt");
 						
 					if( mMode != Mode::CipherBlockChaining ){
 						bool paramSuccess = kernel.Parameter( 0, RoundKey );
-						paramSuccess |= kernel.Parameter( 1, Input );
-						paramSuccess |= kernel.Parameter( 2, Result );
-						paramSuccess |= kernel.Parameter( 3, sizeof( cl_uint ), &blockCount );
+						paramSuccess |= kernel.Parameter( 1, sizeof( cl_uint ), &Rounds );
+						paramSuccess |= kernel.Parameter( 2, Input );
+						paramSuccess |= kernel.Parameter( 3, Result );
+						paramSuccess |= kernel.Parameter( 4, sizeof( cl_uint ), &blockCount );
 						
 						if( !paramSuccess ) {
 							std::cerr << "Parameters Invalid" << std::endl;
@@ -277,10 +265,11 @@ namespace CryptoCL {
 						Buffer Previous( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * previous.size(), &previous[0] );
 						
 						bool paramSuccess = kernel.Parameter( 0, RoundKey );
-						paramSuccess |= kernel.Parameter( 1, Input );
-						paramSuccess |= kernel.Parameter( 2, Previous );
-						paramSuccess |= kernel.Parameter( 3, Result );
-						paramSuccess |= kernel.Parameter( 4, sizeof( cl_uint ), &blockCount );
+						paramSuccess |= kernel.Parameter( 1, sizeof( cl_uint ), &Rounds );
+						paramSuccess |= kernel.Parameter( 2, Input );
+						paramSuccess |= kernel.Parameter( 3, Previous );
+						paramSuccess |= kernel.Parameter( 4, Result );
+						paramSuccess |= kernel.Parameter( 5, sizeof( cl_uint ), &blockCount );
 						
 						if( !paramSuccess ) {
 							std::cerr << "Parameters Invalid" << std::endl;
