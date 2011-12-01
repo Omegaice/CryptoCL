@@ -40,10 +40,12 @@ uchar gmul(uchar a, uchar b) {
 	uchar p = 0;
 	uchar hi_bit_set;
 	for(uchar counter = 0; counter < 8; counter++) {
-		if((b & 1) == 1) p ^= a;
+		if((b & 1) == 1) 
+			p ^= a;
 		hi_bit_set = (a & 0x80);
 		a <<= 1;
-		if(hi_bit_set == 0x80) a ^= 0x1b;		
+		if(hi_bit_set == 0x80) 
+			a ^= 0x1b;		
 		b >>= 1;
 	}
 	return p;
@@ -60,7 +62,8 @@ void SubBytes( uchar* block ){
 	for( uint i = 0; i < BlockSize; i++) block[i] = SBox[block[i]];
 }
 
-void ShiftRows( uchar *temp, uchar *block ) {
+void ShiftRows( uchar *block ) {
+	uchar temp[BlockSize];
 	for( uint i = 0; i < BlockSize; i++) temp[i] = block[i];
 		
 	for (uint i = 0; i < BlockSize; i++) {
@@ -94,36 +97,21 @@ __kernel void encrypt128( __global const uchar *rkey, __global const uchar *data
 	const size_t startPos = BlockSize * idx;
 	
 	// Create Block
-	uchar block[BlockSize], temp[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) {
-		block[i] = data[startPos+i];
-	}
-		
-	// Add Round Key
+	uchar block[BlockSize];
+	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
+	
 	AddRoundKey( rkey, block, 0 );
 	
 	// Calculate Rounds
 	for( uint j = 1; j < 10; j++ ){
-		// Sub Bytes
 		SubBytes( block );
-		
-		// Shift Rows
-		ShiftRows( temp, block );
-	
-		// Mix Columns
+		ShiftRows( block );
 		MixColumns( block );
-		
-		// Add Round Key
 		AddRoundKey( rkey, block, j );
 	}
-
-	// Sub Bytes
-	SubBytes( block );
 	
-	// Shift Rows
-	ShiftRows( temp, block );
-
-	// Add Round Key
+	SubBytes( block );
+	ShiftRows( block );
 	AddRoundKey( rkey, block, 10 );
 		
 	// Copy Result
@@ -139,40 +127,25 @@ __kernel void encrypt192( __global const uchar *rkey, __global const uchar *data
 	
 	const size_t startPos = BlockSize * idx;
 	
-	/* Create Block */
-	uchar block[BlockSize], temp[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) {
-		block[i] = data[startPos+i];
-	}
-		
-	/* Add Round Key */
+	// Create Block
+	uchar block[BlockSize];
+	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
+	
 	AddRoundKey( rkey, block, 0 );
 	
-	/* Calculate Rounds */
+	// Calculate Rounds
 	for( uint j = 1; j < 12; j++ ){
-		/* Sub Bytes */
 		SubBytes( block );
-		
-		/* Shift Rows */
-		ShiftRows( temp, block );
-	
-		/* Mix Columns */
+		ShiftRows( block );
 		MixColumns( block );
-		
-		/* Add Round Key */
 		AddRoundKey( rkey, block, j );
 	}
-
-	/* Sub Bytes */
-	SubBytes( block );
 	
-	/* Shift Rows */
-	ShiftRows( temp, block );
-
-	/* Add Round Key */
+	SubBytes( block );
+	ShiftRows( block );
 	AddRoundKey( rkey, block, 12 );
 		
-	/* Copy Result */
+	// Copy Result
 	for( uint i = 0; i < BlockSize; i++ ) {
 		result[startPos+i] = block[i];
 	}
@@ -185,40 +158,25 @@ __kernel void encrypt256( __global const uchar *rkey, __global const uchar *data
 	
 	const size_t startPos = BlockSize * idx;
 	
-	/* Create Block */
-	uchar block[BlockSize], temp[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) {
-		block[i] = data[startPos+i];
-	}
-		
-	/* Add Round Key */
+	// Create Block
+	uchar block[BlockSize];
+	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
+	
 	AddRoundKey( rkey, block, 0 );
 	
-	/* Calculate Rounds */
+	// Calculate Rounds
 	for( uint j = 1; j < 14; j++ ){
-		/* Sub Bytes */
 		SubBytes( block );
-		
-		/* Shift Rows */
-		ShiftRows( temp, block );
-	
-		/* Mix Columns */
+		ShiftRows( block );
 		MixColumns( block );
-		
-		/* Add Round Key */
 		AddRoundKey( rkey, block, j );
 	}
-
-	/* Sub Bytes */
-	SubBytes( block );
 	
-	/* Shift Rows */
-	ShiftRows( temp, block );
-
-	/* Add Round Key */
+	SubBytes( block );
+	ShiftRows( block );
 	AddRoundKey( rkey, block, 14 );
 		
-	/* Copy Result */
+	// Copy Result
 	for( uint i = 0; i < BlockSize; i++ ) {
 		result[startPos+i] = block[i];
 	}

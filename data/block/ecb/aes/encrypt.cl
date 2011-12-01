@@ -62,7 +62,8 @@ void SubBytes( uchar* block ){
 	for( uint i = 0; i < BlockSize; i++) block[i] = SBox[block[i]];
 }
 
-void ShiftRows( uchar *temp, uchar *block ) {
+void ShiftRows( uchar *block ) {
+	uchar temp[BlockSize];
 	for( uint i = 0; i < BlockSize; i++) temp[i] = block[i];
 		
 	for (uint i = 0; i < BlockSize; i++) {
@@ -96,23 +97,21 @@ __kernel void encrypt128( __global const uchar *rkey, __global const uchar *data
 	const size_t startPos = BlockSize * idx;
 	
 	// Create Block
-	uchar block[BlockSize], temp[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) {
-		block[i] = data[startPos+i];
-	}
+	uchar block[BlockSize];
+	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
 	
 	AddRoundKey( rkey, block, 0 );
 	
 	// Calculate Rounds
 	for( uint j = 1; j < 10; j++ ){
 		SubBytes( block );
-		ShiftRows( temp, block );
+		ShiftRows( block );
 		MixColumns( block );
 		AddRoundKey( rkey, block, j );
 	}
 	
 	SubBytes( block );
-	ShiftRows( temp, block );
+	ShiftRows( block );
 	AddRoundKey( rkey, block, 10 );
 		
 	// Copy Result
@@ -129,23 +128,21 @@ __kernel void encrypt192( __global const uchar *rkey, __global const uchar *data
 	const size_t startPos = BlockSize * idx;
 	
 	// Create Block
-	uchar block[BlockSize], temp[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) {
-		block[i] = data[startPos+i];
-	}
+	uchar block[BlockSize];
+	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
 	
 	AddRoundKey( rkey, block, 0 );
 	
 	// Calculate Rounds
 	for( uint j = 1; j < 12; j++ ){
 		SubBytes( block );
-		ShiftRows( temp, block );
+		ShiftRows( block );
 		MixColumns( block );
 		AddRoundKey( rkey, block, j );
 	}
 	
 	SubBytes( block );
-	ShiftRows( temp, block );
+	ShiftRows( block );
 	AddRoundKey( rkey, block, 12 );
 		
 	// Copy Result
@@ -162,23 +159,21 @@ __kernel void encrypt256( __global const uchar *rkey, __global const uchar *data
 	const size_t startPos = BlockSize * idx;
 	
 	// Create Block
-	uchar block[BlockSize], temp[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) {
-		block[i] = data[startPos+i];
-	}
+	uchar block[BlockSize];
+	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
 	
 	AddRoundKey( rkey, block, 0 );
 	
 	// Calculate Rounds
 	for( uint j = 1; j < 14; j++ ){
 		SubBytes( block );
-		ShiftRows( temp, block );
+		ShiftRows( block );
 		MixColumns( block );
 		AddRoundKey( rkey, block, j );
 	}
 	
 	SubBytes( block );
-	ShiftRows( temp, block );
+	ShiftRows( block );
 	AddRoundKey( rkey, block, 14 );
 		
 	// Copy Result
