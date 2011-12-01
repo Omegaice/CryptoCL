@@ -140,13 +140,13 @@ namespace CryptoCL {
 					DataArray inData( data ), roundKey( mKey.Value() );
 					const size_t blockCount = data.size() / 16;
 					
-					Buffer RoundKey( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * roundKey.size(), &roundKey[0] );				
+					ReadOnlyBuffer RoundKey( *mContext, sizeof( unsigned char ) * roundKey.size(), &roundKey[0] );				
 					
 					Kernel kernel = mEncryption[mMode].GetKernel( "encrypt" );
 										
 					if( mMode != Mode::CipherBlockChaining ){
-						Buffer Result( *mContext, CL_MEM_WRITE_ONLY, sizeof( unsigned char ) * inData.size(), 0 );
-						Buffer Input( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * inData.size(), &inData[0] );
+						WriteOnlyBuffer Result( *mContext, sizeof( unsigned char ) * inData.size() );
+						ReadOnlyBuffer Input( *mContext, sizeof( unsigned char ) * inData.size(), &inData[0] );
 						
 						bool paramSuccess = kernel.Parameter( 0, RoundKey );
 						paramSuccess |= kernel.Parameter( 1, sizeof( cl_uint ), &Rounds );
@@ -183,8 +183,8 @@ namespace CryptoCL {
 							}
 							
 							
-							Buffer Input( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * inData.size(), &inData[0] );
-							Buffer Result( *mContext, CL_MEM_WRITE_ONLY, sizeof( unsigned char ) * inData.size(), 0 );
+							ReadOnlyBuffer Input( *mContext, sizeof( unsigned char ) * inData.size(), &inData[0] );
+							WriteOnlyBuffer Result( *mContext, sizeof( unsigned char ) * inData.size() );
 							
 							bool paramSuccess = kernel.Parameter( 0, RoundKey );
 							paramSuccess |= kernel.Parameter( 1, sizeof( cl_uint ), &Rounds );
@@ -223,9 +223,9 @@ namespace CryptoCL {
 					
 					const size_t blockCount = inData.size() / 16;
 					
-					Buffer RoundKey( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * roundKey.size(), &roundKey[0] );
-					Buffer Input( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * inData.size(), &inData[0] );
-					Buffer Result( *mContext, CL_MEM_WRITE_ONLY, sizeof( unsigned char ) * inData.size(), 0 );
+					ReadOnlyBuffer RoundKey( *mContext, sizeof( unsigned char ) * roundKey.size(), &roundKey[0] );
+					ReadOnlyBuffer Input( *mContext, sizeof( unsigned char ) * inData.size(), &inData[0] );
+					WriteOnlyBuffer Result( *mContext, sizeof( unsigned char ) * inData.size() );
 					
 					Kernel kernel = mDecryption[mMode].GetKernel("decrypt");
 						
@@ -247,7 +247,7 @@ namespace CryptoCL {
 						previous.insert( previous.end(), mInitialisationVector.begin(), mInitialisationVector.end() );
 						previous.insert( previous.end(), inData.begin(), inData.end() - 16 );
 					
-						Buffer Previous( *mContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof( unsigned char ) * previous.size(), &previous[0] );
+						ReadOnlyBuffer Previous( *mContext, sizeof( unsigned char ) * previous.size(), &previous[0] );
 						
 						bool paramSuccess = kernel.Parameter( 0, RoundKey );
 						paramSuccess |= kernel.Parameter( 1, sizeof( cl_uint ), &Rounds );
