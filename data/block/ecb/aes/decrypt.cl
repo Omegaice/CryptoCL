@@ -129,6 +129,37 @@ uchar gmul(uchar a, uchar b) {
 
 #define BlockSize 16
 
+void AddRoundKey( __global const uchar *rkey, uchar* block, const uint round ) {
+	for( uint i = 0; i < BlockSize; i++ ) block[i] ^= rkey[round*BlockSize+i];
+}
+
+void InverseShiftRows( uchar* block ) {
+	uchar temp[BlockSize];
+	for( uint i = 0; i < BlockSize; i++ ) temp[i] = block[i];
+	
+	for (unsigned int i = 0; i < BlockSize; i++) {
+		unsigned int k = (i - (i % 4 * 4)) % BlockSize;
+		block[i] = temp[k];
+	}
+}
+
+void InverseSubBytes( uchar* block ) {
+	for( uint i = 0; i < BlockSize; i++ ) block[i] = InvSBox[block[i]];
+}
+
+void InverseMixColumns( uchar* block ) {
+	for( uint col = 0; col < 4; col++ ){
+		const uint colPos = col * 4;
+		
+		const uchar a = fieldFourteen[block[colPos+0]] ^ fieldNine[block[colPos+3]] ^ fieldThirteen[block[colPos+2]] ^ fieldEleven[block[colPos+1]];
+		const uchar b = fieldFourteen[block[colPos+1]] ^ fieldNine[block[colPos+0]] ^ fieldThirteen[block[colPos+3]] ^ fieldEleven[block[colPos+2]];
+		const uchar c = fieldFourteen[block[colPos+2]] ^ fieldNine[block[colPos+1]] ^ fieldThirteen[block[colPos+0]] ^ fieldEleven[block[colPos+3]];
+		const uchar d = fieldFourteen[block[colPos+3]] ^ fieldNine[block[colPos+2]] ^ fieldThirteen[block[colPos+1]] ^ fieldEleven[block[colPos+0]];
+		
+		block[colPos+0] = a; block[colPos+1] = b; block[colPos+2] = c; block[colPos+3] = d;
+	}
+}
+
 __kernel void decrypt128( __global const uchar *rkey, __global const uchar *data,
 	__global uchar *result, const uint blocks ) {
 	
@@ -143,48 +174,23 @@ __kernel void decrypt128( __global const uchar *rkey, __global const uchar *data
 		block[i] = data[startPos+i];
 	}
 	
-	// Add Round Key
-	for( uint i = 0; i < BlockSize; i++ ) block[i] ^= rkey[10*BlockSize+i];
-		
-	// Calculate Rounds
+	// Calculate Result
+	AddRoundKey( rkey, block, 10 );
+	
 	for( uint j = 9; j > 0; --j ){
-		const uint jPos = j * BlockSize;
-		
-		// Inverse Shift Rows
-		for( unsigned int i = 0; i < BlockSize; i++ ) temp[i] = block[i];
-		
-		for (unsigned int i = 0; i < BlockSize; i++) {
-			unsigned int k = (i - (i % 4 * 4)) % BlockSize;
-			block[i] = temp[k];
-		}
-		
-		// Inverse Sub Bytes + Add Round Key
-		for( uint i = 0; i < BlockSize; i++ ) block[i] = InvSBox[block[i]] ^ rkey[jPos+i];
-		
-		// Inverse Mix Columns
-		for( uint col = 0; col < 4; col++ ){
-			const uint colPos = col * 4;
-			
-			const uchar a = fieldFourteen[block[colPos+0]] ^ fieldNine[block[colPos+3]] ^ fieldThirteen[block[colPos+2]] ^ fieldEleven[block[colPos+1]];
-			const uchar b = fieldFourteen[block[colPos+1]] ^ fieldNine[block[colPos+0]] ^ fieldThirteen[block[colPos+3]] ^ fieldEleven[block[colPos+2]];
-			const uchar c = fieldFourteen[block[colPos+2]] ^ fieldNine[block[colPos+1]] ^ fieldThirteen[block[colPos+0]] ^ fieldEleven[block[colPos+3]];
-			const uchar d = fieldFourteen[block[colPos+3]] ^ fieldNine[block[colPos+2]] ^ fieldThirteen[block[colPos+1]] ^ fieldEleven[block[colPos+0]];
-			
-			block[colPos+0] = a; block[colPos+1] = b; block[colPos+2] = c; block[colPos+3] = d;
-		}
+		InverseShiftRows( block );
+		InverseSubBytes( block );
+		AddRoundKey( rkey, block, j );
+		InverseMixColumns( block );
 	}
 	
-	// Inverse Sub Bytes + Inverse Shift Rows
-	for( unsigned int i = 0; i < BlockSize; i++ ) temp[i] = InvSBox[block[i]];
+	InverseSubBytes( block );
+	InverseShiftRows( block );
+	AddRoundKey( rkey, block, 0 );
 	
-	for (uint i = 0; i < BlockSize; i++) {
-		const uint k = (i - ( (i % 4) * 4)) % BlockSize;
-		block[i] = temp[k];
-	}
-	
-	// Add Round Key & Copy Result
+	// Store Result
 	for( uint i = 0; i < BlockSize; i++ ) {
-		result[startPos+i] = block[i] ^ rkey[i];
+		result[startPos+i] = block[i];
 	}
 }
 
@@ -202,48 +208,23 @@ __kernel void decrypt192( __global const uchar *rkey, __global const uchar *data
 		block[i] = data[startPos+i];
 	}
 	
-	// Add Round Key
-	for( uint i = 0; i < BlockSize; i++ ) block[i] ^= rkey[12*BlockSize+i];
-		
-	// Calculate Rounds
+	// Calculate Result
+	AddRoundKey( rkey, block, 12 );
+	
 	for( uint j = 11; j > 0; --j ){
-		const uint jPos = j * BlockSize;
-		
-		// Inverse Shift Rows
-		for( unsigned int i = 0; i < BlockSize; i++ ) temp[i] = block[i];
-		
-		for (unsigned int i = 0; i < BlockSize; i++) {
-			unsigned int k = (i - (i % 4 * 4)) % BlockSize;
-			block[i] = temp[k];
-		}
-		
-		// Inverse Sub Bytes + Add Round Key
-		for( uint i = 0; i < BlockSize; i++ ) block[i] = InvSBox[block[i]] ^ rkey[jPos+i];
-		
-		// Inverse Mix Columns
-		for( uint col = 0; col < 4; col++ ){
-			const uint colPos = col * 4;
-			
-			const uchar a = fieldFourteen[block[colPos+0]] ^ fieldNine[block[colPos+3]] ^ fieldThirteen[block[colPos+2]] ^ fieldEleven[block[colPos+1]];
-			const uchar b = fieldFourteen[block[colPos+1]] ^ fieldNine[block[colPos+0]] ^ fieldThirteen[block[colPos+3]] ^ fieldEleven[block[colPos+2]];
-			const uchar c = fieldFourteen[block[colPos+2]] ^ fieldNine[block[colPos+1]] ^ fieldThirteen[block[colPos+0]] ^ fieldEleven[block[colPos+3]];
-			const uchar d = fieldFourteen[block[colPos+3]] ^ fieldNine[block[colPos+2]] ^ fieldThirteen[block[colPos+1]] ^ fieldEleven[block[colPos+0]];
-			
-			block[colPos+0] = a; block[colPos+1] = b; block[colPos+2] = c; block[colPos+3] = d;
-		}
+		InverseShiftRows( block );
+		InverseSubBytes( block );
+		AddRoundKey( rkey, block, j );
+		InverseMixColumns( block );
 	}
 	
-	// Inverse Sub Bytes + Inverse Shift Rows
-	for( unsigned int i = 0; i < BlockSize; i++ ) temp[i] = InvSBox[block[i]];
+	InverseSubBytes( block );
+	InverseShiftRows( block );
+	AddRoundKey( rkey, block, 0 );
 	
-	for (uint i = 0; i < BlockSize; i++) {
-		const uint k = (i - ( (i % 4) * 4)) % BlockSize;
-		block[i] = temp[k];
-	}
-	
-	// Add Round Key & Copy Result
+	// Store Result
 	for( uint i = 0; i < BlockSize; i++ ) {
-		result[startPos+i] = block[i] ^ rkey[i];
+		result[startPos+i] = block[i];
 	}
 }
 
@@ -261,47 +242,22 @@ __kernel void decrypt256( __global const uchar *rkey, __global const uchar *data
 		block[i] = data[startPos+i];
 	}
 	
-	// Add Round Key
-	for( uint i = 0; i < BlockSize; i++ ) block[i] ^= rkey[14*BlockSize+i];
-		
-	// Calculate Rounds
+	// Calculate Result
+	AddRoundKey( rkey, block, 14 );
+	
 	for( uint j = 13; j > 0; --j ){
-		const uint jPos = j * BlockSize;
-		
-		// Inverse Shift Rows
-		for( unsigned int i = 0; i < BlockSize; i++ ) temp[i] = block[i];
-		
-		for (unsigned int i = 0; i < BlockSize; i++) {
-			unsigned int k = (i - (i % 4 * 4)) % BlockSize;
-			block[i] = temp[k];
-		}
-		
-		// Inverse Sub Bytes + Add Round Key
-		for( uint i = 0; i < BlockSize; i++ ) block[i] = InvSBox[block[i]] ^ rkey[jPos+i];
-		
-		// Inverse Mix Columns
-		for( uint col = 0; col < 4; col++ ){
-			const uint colPos = col * 4;
-			
-			const uchar a = fieldFourteen[block[colPos+0]] ^ fieldNine[block[colPos+3]] ^ fieldThirteen[block[colPos+2]] ^ fieldEleven[block[colPos+1]];
-			const uchar b = fieldFourteen[block[colPos+1]] ^ fieldNine[block[colPos+0]] ^ fieldThirteen[block[colPos+3]] ^ fieldEleven[block[colPos+2]];
-			const uchar c = fieldFourteen[block[colPos+2]] ^ fieldNine[block[colPos+1]] ^ fieldThirteen[block[colPos+0]] ^ fieldEleven[block[colPos+3]];
-			const uchar d = fieldFourteen[block[colPos+3]] ^ fieldNine[block[colPos+2]] ^ fieldThirteen[block[colPos+1]] ^ fieldEleven[block[colPos+0]];
-			
-			block[colPos+0] = a; block[colPos+1] = b; block[colPos+2] = c; block[colPos+3] = d;
-		}
+		InverseShiftRows( block );
+		InverseSubBytes( block );
+		AddRoundKey( rkey, block, j );
+		InverseMixColumns( block );
 	}
 	
-	// Inverse Sub Bytes + Inverse Shift Rows
-	for( unsigned int i = 0; i < BlockSize; i++ ) temp[i] = InvSBox[block[i]];
+	InverseSubBytes( block );
+	InverseShiftRows( block );
+	AddRoundKey( rkey, block, 0 );
 	
-	for (uint i = 0; i < BlockSize; i++) {
-		const uint k = (i - ( (i % 4) * 4)) % BlockSize;
-		block[i] = temp[k];
-	}
-	
-	// Add Round Key & Copy Result
+	// Store Result
 	for( uint i = 0; i < BlockSize; i++ ) {
-		result[startPos+i] = block[i] ^ rkey[i];
+		result[startPos+i] = block[i];
 	}
 }
