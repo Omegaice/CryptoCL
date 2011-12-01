@@ -241,11 +241,7 @@ namespace CryptoCL {
 							throw std::exception();
 						}
 
-						if( blockCount % 2 != 0 ) {
-							mQueue->RangeKernel( kernel, blockCount + 1 );
-						}else{
-							mQueue->RangeKernel( kernel, blockCount );
-						}
+						mQueue->RangeKernel( kernel, ( blockCount % 2 == 0 ) ? blockCount : ( blockCount + 1 ) );
 					}else{
 						DataArray previous;
 						previous.insert( previous.end(), mInitialisationVector.begin(), mInitialisationVector.end() );
@@ -264,13 +260,10 @@ namespace CryptoCL {
 							std::cerr << "Parameters Invalid" << std::endl;
 							throw std::exception();
 						}
-
-						if( blockCount % 2 != 0 ) {
-							mQueue->RangeKernel( kernel, blockCount + 1 );
-						}else{
-							mQueue->RangeKernel( kernel, blockCount );
-						}
+						
+						mQueue->RangeKernel( kernel, ( blockCount % 2 == 0 ) ? blockCount : ( blockCount + 1 ) );
 					}
+					
 					
 					mQueue->ReadBuffer( Result, sizeof( char ) * inData.size(), &result[0] );
 				}

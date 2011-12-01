@@ -147,17 +147,20 @@ void InverseSubBytes( uchar* block ) {
 	for( uint i = 0; i < BlockSize; i++ ) block[i] = InvSBox[block[i]];
 }
 
+void InverseMixColumn( uchar* column, uint pos ) {
+	const uchar a = fieldFourteen[column[pos+0]] ^ fieldNine[column[pos+3]] ^ fieldThirteen[column[pos+2]] ^ fieldEleven[column[pos+1]];
+	const uchar b = fieldFourteen[column[pos+1]] ^ fieldNine[column[pos+0]] ^ fieldThirteen[column[pos+3]] ^ fieldEleven[column[pos+2]];
+	const uchar c = fieldFourteen[column[pos+2]] ^ fieldNine[column[pos+1]] ^ fieldThirteen[column[pos+0]] ^ fieldEleven[column[pos+3]];
+	const uchar d = fieldFourteen[column[pos+3]] ^ fieldNine[column[pos+2]] ^ fieldThirteen[column[pos+1]] ^ fieldEleven[column[pos+0]];
+	
+	column[pos+0] = a; column[pos+1] = b; column[pos+2] = c; column[pos+3] = d;
+}
+
 void InverseMixColumns( uchar* block ) {
-	for( uint col = 0; col < 4; col++ ){
-		const uint colPos = col * 4;
-		
-		const uchar a = fieldFourteen[block[colPos+0]] ^ fieldNine[block[colPos+3]] ^ fieldThirteen[block[colPos+2]] ^ fieldEleven[block[colPos+1]];
-		const uchar b = fieldFourteen[block[colPos+1]] ^ fieldNine[block[colPos+0]] ^ fieldThirteen[block[colPos+3]] ^ fieldEleven[block[colPos+2]];
-		const uchar c = fieldFourteen[block[colPos+2]] ^ fieldNine[block[colPos+1]] ^ fieldThirteen[block[colPos+0]] ^ fieldEleven[block[colPos+3]];
-		const uchar d = fieldFourteen[block[colPos+3]] ^ fieldNine[block[colPos+2]] ^ fieldThirteen[block[colPos+1]] ^ fieldEleven[block[colPos+0]];
-		
-		block[colPos+0] = a; block[colPos+1] = b; block[colPos+2] = c; block[colPos+3] = d;
-	}
+	InverseMixColumn( block, 0 );
+	InverseMixColumn( block, 4 );
+	InverseMixColumn( block, 8 );
+	InverseMixColumn( block, 12 );
 }
 
 __kernel void decrypt( __global const uchar *rkey, const uint rounds, 
