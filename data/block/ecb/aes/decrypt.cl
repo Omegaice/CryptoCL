@@ -169,10 +169,8 @@ __kernel void decrypt128( __global const uchar *rkey, __global const uchar *data
 	const size_t startPos = BlockSize * idx;
 	
 	// Create Block
-	uchar block[BlockSize], temp[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) {
-		block[i] = data[startPos+i];
-	}
+	uchar block[BlockSize];
+	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
 	
 	// Calculate Result
 	AddRoundKey( rkey, block, 10 );
@@ -203,10 +201,8 @@ __kernel void decrypt192( __global const uchar *rkey, __global const uchar *data
 	const size_t startPos = BlockSize * idx;
 	
 	// Create Block
-	uchar block[BlockSize], temp[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) {
-		block[i] = data[startPos+i];
-	}
+	uchar block[BlockSize];
+	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
 	
 	// Calculate Result
 	AddRoundKey( rkey, block, 12 );
@@ -237,10 +233,8 @@ __kernel void decrypt256( __global const uchar *rkey, __global const uchar *data
 	const size_t startPos = BlockSize * idx;
 	
 	// Create Block
-	uchar block[BlockSize], temp[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) {
-		block[i] = data[startPos+i];
-	}
+	uchar block[BlockSize];
+	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
 	
 	// Calculate Result
 	AddRoundKey( rkey, block, 14 );
