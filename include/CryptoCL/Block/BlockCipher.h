@@ -6,23 +6,17 @@
 namespace CryptoCL {
 	namespace Block {
 		namespace Mode {
-			enum BlockMode {
-				ElectronicCookBook, CipherBlockChaining
-			};
+			enum BlockMode { ElectronicCookBook, CipherBlockChaining };
 		}
 		
 		class BlockCipher : public Cipher {
 			protected:
 				Mode::BlockMode mMode;
-				DataArray mInitialisationVector;
 			public:
-				BlockCipher( const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
+				BlockCipher( const Mode::BlockMode mode = Mode::ElectronicCookBook );
 				
 				const Mode::BlockMode& Mode() const;
 				void Mode( const Mode::BlockMode& mode );
-				
-				const DataArray& InitialisationVector() const;
-				void InitialisationVector( const DataArray& iv );
 			protected:
 				const std::vector<DataArray> SplitArray( const DataArray& array, const unsigned int size ) const;
 		};

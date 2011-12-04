@@ -7,27 +7,28 @@ namespace CryptoCL {
 	namespace Block {
 		namespace AES {
 			/* Public Functions */
-			Reference::Reference( const Mode::BlockMode mode, const DataArray& iv ) 
-				: AESBlockCipher( mode, iv ) {
+			Reference::Reference( const Mode::BlockMode mode ) : AESBlockCipher( mode ) {
 			
 			}
 			
-			const DataArray Reference::Encrypt( const DataArray& data ) {
+			const DataArray Reference::Encrypt( const DataArray& data, const CryptoCL::Key& key, const DataArray& iv ) const {
 				const std::vector<DataArray> blocks = SplitArray( data, 16 );
 				std::vector<DataArray> blockResults( blocks.size() );
+				
+				const RoundKey& rkey = dynamic_cast<const RoundKey&>(key);
 				
 				for( unsigned int i = 0; i < blocks.size(); i++ ){
 					blockResults[i] = blocks[i];
 					
 					if( mMode == Mode::CipherBlockChaining ){
 						if( i == 0 ){
-							blockResults[i] = XORBlock( blockResults[i], mInitialisationVector );
+							blockResults[i] = XORBlock( blockResults[i], iv );
 						}else{
 							blockResults[i] = XORBlock( blockResults[i], blockResults[i-1] );
 						}
 					}
 					
-					blockResults[i] = Encrypt( blockResults[i], mKey );
+					blockResults[i] = EncryptBlock( blockResults[i], rkey );
 				}
 				
 				DataArray result;
@@ -38,16 +39,32 @@ namespace CryptoCL {
 				return result;
 			}
 			
-			const DataArray Reference::Decrypt( const DataArray& data ) {
+			const ArrayVector Reference::Encrypt( const ArrayVector& data, const KeyVector& key, const ArrayVector& iv ) const {
+				ArrayVector result( data.size() );
+				
+				for( unsigned int i = 0; i < data.size(); i++ ){
+					if( iv.size() > 0 ){
+						result[i] = Encrypt( data[i], *key[i], iv[i] );
+					}else{
+						result[i] = Encrypt( data[i], *key[i] );
+					}
+				}
+				
+				return result;
+			}
+			
+			const DataArray Reference::Decrypt( const DataArray& data, const CryptoCL::Key& key, const DataArray& iv ) const {
 				const std::vector<DataArray> blocks = SplitArray( data, 16 );
 				std::vector<DataArray> blockResults( blocks.size() );
 				
+				const RoundKey& rkey = dynamic_cast<const RoundKey&>(key);
+				
 				for( unsigned int i = 0; i < blocks.size(); i++ ){
-					blockResults[i] = Decrypt( blocks[i], mKey );
+					blockResults[i] = DecryptBlock( blocks[i], rkey );
 					
 					if( mMode == Mode::CipherBlockChaining ){
 						if( i == 0 ){
-							blockResults[i] = XORBlock( blockResults[i], mInitialisationVector );
+							blockResults[i] = XORBlock( blockResults[i], iv );
 						}else{
 							blockResults[i] = XORBlock( blockResults[i], blocks[i-1] );
 						}
@@ -62,12 +79,26 @@ namespace CryptoCL {
 				return result;
 			}
 			
-			const DataArray Reference::Encrypt( const DataArray& block, const RoundKey& rkey ) const {
+			const ArrayVector Reference::Decrypt( const ArrayVector& data, const KeyVector& key, const ArrayVector& iv ) const {
+				ArrayVector result( data.size() );
+				
+				for( unsigned int i = 0; i < data.size(); i++ ){
+					if( iv.size() > 0 ){
+						result[i] = Decrypt( data[i], *key[i], iv[i] );
+					}else{
+						result[i] = Decrypt( data[i], *key[i] );
+					}
+				}
+				
+				return result;
+			}
+			
+			const DataArray Reference::EncryptBlock( const DataArray& block, const RoundKey& rkey ) const {
 				DataArray result( block );
 				
 				result = AddRoundKey( result, rkey, 0 );
 				
-				for( unsigned int j = 1; j < mKey.Rounds(); j++ ){
+				for( unsigned int j = 1; j < rkey.Rounds(); j++ ){
 					result = AddRoundKey( MixColumns( ShiftRows( SubBytes( result ) ) ), rkey, j );
 				}
 				
@@ -76,12 +107,12 @@ namespace CryptoCL {
 				return result;
 			}
 			
-			const DataArray Reference::Decrypt( const DataArray& block, const RoundKey& rkey ) const {
+			const DataArray Reference::DecryptBlock( const DataArray& block, const RoundKey& rkey ) const {
 				DataArray result( block );
 				
 				result = AddRoundKey( result, rkey, rkey.Rounds() );
 				
-				for( unsigned int j = mKey.Rounds() - 1; j > 0; j-- ){
+				for( unsigned int j = rkey.Rounds() - 1; j > 0; j-- ){
 					result = InvMixColumns( AddRoundKey( InvSubBytes( InvShiftRows( result ) ), rkey, j ) );
 				}
 			

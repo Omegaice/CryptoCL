@@ -11,23 +11,23 @@ namespace CryptoCL {
 				enum KeySize{ None = 0, Bit128 = 16, Bit192 = 24, Bit256 = 32 };
 			}
 			
-			class RoundKey {
+			class RoundKey : public CryptoCL::Key {
 				private:
-					Key::KeySize mSize;
-					DataArray mData;
+					const AES::Key::KeySize mSize;
+					const DataArray mRounds;
 				public:
-					RoundKey();
 					RoundKey( const DataArray& key );
-					
-					void Initialise( const DataArray& key );
 					
 					unsigned int Rounds() const;
 					
-					const Key::KeySize Size() const;
+					const AES::Key::KeySize Size() const;
 					const DataArray Value() const;
 					const DataArray Value( const unsigned int i ) const;
 				private:
-					const DataArray KeyScheduleCore( const DataArray& input, const unsigned int iteration );
+					RoundKey& operator=( const RoundKey& other );
+					
+					const DataArray GenerateKey( const DataArray& key ) const;
+					const DataArray KeyScheduleCore( const DataArray& input, const unsigned int iteration ) const;
 			};
 		}
 	}

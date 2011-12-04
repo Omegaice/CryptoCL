@@ -5,27 +5,13 @@
 namespace CryptoCL {
 	namespace Block {
 		namespace AES {
-			AESBlockCipher::AESBlockCipher( const Mode::BlockMode mode, const DataArray& iv ) 
-				: BlockCipher( mode, iv ), mInitialised( false ) {
+			AESBlockCipher::AESBlockCipher( const Mode::BlockMode mode ) 
+				: BlockCipher( mode ) {
 			
 			}
 			
 			AESBlockCipher::~AESBlockCipher() {
 			
-			}
-			
-			void AESBlockCipher::Initialise( const RoundKey& key ) {
-				mKey = key;
-				OnInitialise( key );
-				
-				mInitialised = true;
-			}
-			
-			bool AESBlockCipher::isInitialised() const {
-				return mInitialised;
-			}
-			
-			void AESBlockCipher::OnInitialise( const RoundKey& key ) {
 			}
 			
 			/* Static Variables */

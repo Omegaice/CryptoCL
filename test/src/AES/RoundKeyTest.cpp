@@ -21,7 +21,7 @@ namespace AES {
 		
 		const RoundKey rKey( DataArray( key, key + 16 ) );
 		
-		CPPUNIT_ASSERT_EQUAL( (int)Key::Bit128, (int)rKey.Size() );
+		CPPUNIT_ASSERT_EQUAL( (int)CryptoCL::Block::AES::Key::Bit128, (int)rKey.Size() );
 	}
 	
 	void RoundKeyTest::testRoundCount128() {
@@ -99,7 +99,7 @@ namespace AES {
 		
 		const RoundKey rKey( DataArray( key, key + 24 ) );
 		
-		CPPUNIT_ASSERT_EQUAL( (int)Key::Bit192, (int)rKey.Size() );
+		CPPUNIT_ASSERT_EQUAL( (int)CryptoCL::Block::AES::Key::Bit192, (int)rKey.Size() );
 	}
 	
 	void RoundKeyTest::testRoundCount192() {
@@ -182,7 +182,7 @@ namespace AES {
 		
 		const RoundKey rKey( DataArray( key, key + 32 ) );
 		
-		CPPUNIT_ASSERT_EQUAL( (int)Key::Bit256, (int)rKey.Size() );
+		CPPUNIT_ASSERT_EQUAL( (int)CryptoCL::Block::AES::Key::Bit256, (int)rKey.Size() );
 	}
 	
 	

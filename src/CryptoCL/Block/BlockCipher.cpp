@@ -4,7 +4,7 @@
 
 namespace CryptoCL {
 	namespace Block {
-		BlockCipher::BlockCipher( const Mode::BlockMode mode, const DataArray& iv ) : mMode( mode ), mInitialisationVector( iv ) {
+		BlockCipher::BlockCipher( const Mode::BlockMode mode ) : mMode( mode ) {
 		
 		}
 				
@@ -15,14 +15,6 @@ namespace CryptoCL {
 		
 		void BlockCipher::Mode( const Mode::BlockMode& mode ) {
 			mMode = mode;
-		}
-		
-		const DataArray& BlockCipher::InitialisationVector() const {
-			return mInitialisationVector;
-		}
-		
-		void BlockCipher::InitialisationVector( const DataArray& iv ) {
-			mInitialisationVector = iv;
 		}
 		
 		const std::vector<DataArray> BlockCipher::SplitArray( const DataArray& array, const unsigned int size ) const{

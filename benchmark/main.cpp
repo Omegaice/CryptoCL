@@ -6,16 +6,16 @@
 #include <iostream>
 
 #include "Timer.h"
-#include <CryptoCL/Block/AES/OpenCL.h>
+//#include <CryptoCL/Block/AES/OpenCL.h>
 #include <CryptoCL/Block/AES/Reference.h>
 
 using namespace CryptoCL;
 using namespace CryptoCL::Block::AES;
 
-const unsigned int AverageIterations = 1;
-const unsigned int StepSize = 1024 * 1024;
+const unsigned int AverageIterations = 10;
+const unsigned int StepSize = 16;
 
-void BenchmarkEncryption( const std::string& name, const DataArray& data, CryptoCL::Cipher& cipher ){
+void BenchmarkEncryption( const std::string& name, const DataArray& data, const CryptoCL::Cipher& cipher, const CryptoCL::Key& key, const DataArray& iv = DataArray() ){
 	std::ostringstream fileName;
 	fileName << "results_" << name << "_encryption.txt";
 
@@ -31,7 +31,7 @@ void BenchmarkEncryption( const std::string& name, const DataArray& data, Crypto
 		double average = 0.0;
 		for( unsigned int i = 0; i < AverageIterations; i++ ){
 			loopTime.start();
-			const DataArray encrypted = cipher.Encrypt( dData );
+			const DataArray encrypted = cipher.Encrypt( dData, key, iv );
 			loopTime.stop();
 			
 			average += loopTime.getElapsedTimeInMilliSec();
@@ -48,7 +48,7 @@ void BenchmarkEncryption( const std::string& name, const DataArray& data, Crypto
 	std::cout << name << "_encryption completed in " << totalTime.getElapsedTimeInMilliSec() << "ms" << std::endl;
 }
 
-void BenchmarkDecryption( const std::string& name, const DataArray& data, CryptoCL::Cipher& cipher ){
+void BenchmarkDecryption( const std::string& name, const DataArray& data, const CryptoCL::Cipher& cipher, const CryptoCL::Key& key, const DataArray& iv = DataArray() ){
 	std::ostringstream fileName;
 	fileName << "results_" << name << "_decryption.txt";
 
@@ -64,7 +64,7 @@ void BenchmarkDecryption( const std::string& name, const DataArray& data, Crypto
 		double average = 0.0;
 		for( unsigned int i = 0; i < AverageIterations; i++ ){
 			loopTime.start();
-			const DataArray decrypted = cipher.Decrypt( eData );
+			const DataArray decrypted = cipher.Decrypt( eData, key, iv );
 			loopTime.stop();
 			
 			average += loopTime.getElapsedTimeInMilliSec();
@@ -83,13 +83,13 @@ void BenchmarkDecryption( const std::string& name, const DataArray& data, Crypto
 
 enum Mode{ Encryption, Decryption, Both };
 
-void Benchmark( const Mode mode, const std::string& name, const DataArray& dData, const DataArray& eData, CryptoCL::Cipher& cipher ){
-	if( mode == Encryption || mode == Both ) BenchmarkEncryption( name, dData, cipher );
-	if( mode == Decryption || mode == Both ) BenchmarkDecryption( name, eData, cipher );
+void Benchmark( const Mode mode, const std::string& name, const DataArray& dData, const DataArray& eData, const CryptoCL::Cipher& cipher, const CryptoCL::Key& key, const DataArray& iv = DataArray() ){
+	if( mode == Encryption || mode == Both ) BenchmarkEncryption( name, dData, cipher, key, iv );
+	if( mode == Decryption || mode == Both ) BenchmarkDecryption( name, eData, cipher, key, iv );
 }
 
 int main( int argc, char* argv[] ) {
-	const unsigned int dataSize = 1024*1024;
+	const unsigned int dataSize = 16*1024;
 	DataArray dData( dataSize );
 	
 	Mode mode = Both;
@@ -114,23 +114,21 @@ int main( int argc, char* argv[] ) {
 	const RoundKey rKey( DataArray( key, key + 32 ) );
 	
 	Reference cipher;
-	cipher.Initialise( rKey );
 	
-	const DataArray eData = cipher.Encrypt( dData );
-	//Benchmark(mode, "reference", dData, eData, cipher);
+	const DataArray eData = cipher.Encrypt( dData, rKey );
+	Benchmark(mode, "reference", dData, eData, cipher, rKey );
 	
-	Reference cipherCBC( Block::Mode::CipherBlockChaining, DataArray( iv, iv + 16 ) );
-	cipherCBC.Initialise( rKey );
+	Reference cipherCBC( Block::Mode::CipherBlockChaining );
 	
-	const DataArray eCBCData = cipher.Encrypt( dData );
+	const DataArray eCBCData = cipher.Encrypt( dData, rKey, DataArray( iv, iv + 16 ) );
 	
-	//Benchmark(mode, "reference_cbc", dData, eCBCData, cipherCBC);
+	Benchmark(mode, "reference_cbc", dData, eCBCData, cipherCBC, rKey, DataArray( iv, iv + 16 ) );
 	
-	try{
+	/*try{
 		OpenCL cpuCipher( OpenCL::CPU );
 		cpuCipher.Initialise( rKey );
 	
-		//Benchmark(mode, "opencl_cpu", dData, eData, cpuCipher );
+		Benchmark(mode, "opencl_cpu", dData, eData, cpuCipher );
 	}catch( DeviceUnavailiable& e ){
 		
 	}
@@ -139,7 +137,7 @@ int main( int argc, char* argv[] ) {
 		OpenCL cpuCipherCBC( OpenCL::CPU, Block::Mode::CipherBlockChaining, DataArray( iv, iv + 16 ) );
 		cpuCipherCBC.Initialise( rKey );
 		
-		//Benchmark(mode, "opencl_cpu_cbc", dData, eCBCData, cpuCipherCBC );
+		Benchmark(mode, "opencl_cpu_cbc", dData, eCBCData, cpuCipherCBC );
 	}catch( DeviceUnavailiable& e ){
 		
 	}
@@ -148,7 +146,7 @@ int main( int argc, char* argv[] ) {
 		OpenCL gpuCipher( OpenCL::GPU );
 		gpuCipher.Initialise( rKey );
 		
-		//Benchmark(mode, "opencl_gpu", dData, eData, gpuCipher );
+		Benchmark(mode, "opencl_gpu", dData, eData, gpuCipher );
 	}catch( DeviceUnavailiable& e ){
 		
 	}
@@ -160,7 +158,7 @@ int main( int argc, char* argv[] ) {
 		Benchmark(mode, "opencl_gpu_cbc", dData, eCBCData, gpuCipherCBC );
 	}catch( DeviceUnavailiable& e ){
 		
-	}
+	}*/
 		
 	return 0;
 } 

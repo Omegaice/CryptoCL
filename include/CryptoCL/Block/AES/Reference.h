@@ -8,14 +8,17 @@ namespace CryptoCL {
 		namespace AES {
 			class Reference : public AESBlockCipher {
 				public:
-					Reference( const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
+					Reference( const Mode::BlockMode mode = Mode::ElectronicCookBook);
 					
-					const DataArray Encrypt( const DataArray& data );
-					const DataArray Decrypt( const DataArray& data );
+					const DataArray Encrypt( const DataArray& data, const CryptoCL::Key& key, const DataArray& iv = DataArray() ) const;
+					const ArrayVector Encrypt( const ArrayVector& data, const KeyVector& key, const ArrayVector& iv = ArrayVector() ) const;
+					
+					const DataArray Decrypt( const DataArray& data, const CryptoCL::Key& key, const DataArray& iv = DataArray() ) const;
+					const ArrayVector Decrypt( const ArrayVector& data, const KeyVector& key, const ArrayVector& iv = ArrayVector() ) const;
 				protected:
 					/* Block Functions */
-					const DataArray Encrypt( const DataArray& block, const RoundKey& rkey ) const;
-					const DataArray Decrypt( const DataArray& block, const RoundKey& rkey ) const;
+					const DataArray EncryptBlock( const DataArray& block, const RoundKey& rkey ) const;
+					const DataArray DecryptBlock( const DataArray& block, const RoundKey& rkey ) const;
 					
 					const DataArray XORBlock( const DataArray& a, const DataArray& b ) const;
 					const DataArray AddRoundKey( const DataArray& block, const RoundKey& key, const unsigned int round ) const;
