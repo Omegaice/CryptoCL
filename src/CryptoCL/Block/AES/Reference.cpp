@@ -8,80 +8,93 @@ namespace CryptoCL {
 		namespace AES {
 			/* Public Functions */
 			Reference::Reference( const Mode::BlockMode mode, const DataArray& iv ) 
-				: AESBlockCipher( mode, iv ), mState( 0 ) {
+				: AESBlockCipher( mode, iv ) {
 			
 			}
 			
 			const DataArray Reference::Encrypt( const DataArray& data ) {
-				DataArray result, lData( data.begin(), data.end() );
+				const std::vector<DataArray> blocks = SplitArray( data, 16 );
+				std::vector<DataArray> blockResults( blocks.size() );
 				
-				const unsigned int blocks = lData.size() / 16;
-				for( unsigned int i = 0; i < blocks; i++ ){
-					const unsigned int sPos = i * 16;
+				for( unsigned int i = 0; i < blocks.size(); i++ ){
+					blockResults[i] = blocks[i];
 					
-					mState.clear();
-					mState.insert( mState.end(), lData.begin() + sPos, lData.begin() + sPos + 16 );
-					
-					if( mMode == Mode::CipherBlockChaining ) {
-						if( i == 0 ) {
-							for(unsigned int s = 0; s < 16; s++ ) mState[s] ^= mInitialisationVector[s];
+					if( mMode == Mode::CipherBlockChaining ){
+						if( i == 0 ){
+							blockResults[i] = XORBlock( blockResults[i], mInitialisationVector );
 						}else{
-							for(unsigned int s = 0; s < 16; s++ ) mState[s] ^= result[sPos-16+s];
+							blockResults[i] = XORBlock( blockResults[i], blockResults[i-1] );
 						}
 					}
 					
-					AddRoundKey( 0 );
-					
-					for( unsigned int j = 1; j < mKey.Rounds(); j++ ){
-						SubBytes();
-						ShiftRows();
-						MixColumns();
-						AddRoundKey( j );
-					}
-					
-					SubBytes();
-					ShiftRows();
-					AddRoundKey( mKey.Rounds() );
-					
-					result.insert( result.end(), mState.begin(), mState.end() );
+					blockResults[i] = Encrypt( blockResults[i], mKey );
 				}
 				
+				DataArray result;
+				for( unsigned int i = 0; i < blockResults.size(); i++ ){
+					result.insert( result.end(), blockResults[i].begin(), blockResults[i].end() );
+				}
+								
 				return result;
 			}
 			
 			const DataArray Reference::Decrypt( const DataArray& data ) {
-				DataArray result, lData( data.begin(), data.end() );
+				const std::vector<DataArray> blocks = SplitArray( data, 16 );
+				std::vector<DataArray> blockResults( blocks.size() );
 				
-				const unsigned int blocks = lData.size() / 16;
-				for( unsigned int i = 0; i < blocks; i++ ){
-					const unsigned int sPos = i * 16;
+				for( unsigned int i = 0; i < blocks.size(); i++ ){
+					blockResults[i] = Decrypt( blocks[i], mKey );
 					
-					mState.clear();
-					mState.insert( mState.end(), lData.begin() + sPos, lData.begin() + sPos + 16 );
-					
-					AddRoundKey( mKey.Rounds() );
-					
-					for( unsigned int j = mKey.Rounds() - 1; j > 0; j-- ){
-						InvShiftRows();
-						InvSubBytes();
-						AddRoundKey( j );
-						InvMixColumns();
-					}
-					
-					InvSubBytes();
-					InvShiftRows();
-					AddRoundKey( 0 );
-
-					if( mMode == Mode::CipherBlockChaining ) {
-						if( i == 0 ) {
-							for(unsigned int s = 0; s < 16; s++ ) mState[s] ^= mInitialisationVector[s];
+					if( mMode == Mode::CipherBlockChaining ){
+						if( i == 0 ){
+							blockResults[i] = XORBlock( blockResults[i], mInitialisationVector );
 						}else{
-							for(unsigned int s = 0; s < 16; s++ ) mState[s] ^= data[sPos-16+s];
+							blockResults[i] = XORBlock( blockResults[i], blocks[i-1] );
 						}
-					}
-					
-					result.insert( result.end(), mState.begin(), mState.end() );
+					}					
 				}
+				
+				DataArray result;
+				for( unsigned int i = 0; i < blockResults.size(); i++ ){
+					result.insert( result.end(), blockResults[i].begin(), blockResults[i].end() );
+				}
+								
+				return result;
+			}
+			
+			const DataArray Reference::Encrypt( const DataArray& block, const RoundKey& rkey ) {
+				DataArray result( block );
+				
+				result = AddRoundKey( result, rkey, 0 );
+					
+				for( unsigned int j = 1; j < mKey.Rounds(); j++ ){
+					result = SubBytes( result );
+					result = ShiftRows( result );
+					result = MixColumns( result );
+					result = AddRoundKey( result, rkey, j );
+				}
+				
+				result = SubBytes( result );
+				result = ShiftRows( result );
+				result = AddRoundKey( result, rkey, rkey.Rounds() );
+				
+				return result;
+			}
+			
+			const DataArray Reference::Decrypt( const DataArray& block, const RoundKey& rkey ) {
+				DataArray result( block );
+				
+				result = AddRoundKey( result, rkey, rkey.Rounds() );
+				for( unsigned int j = mKey.Rounds() - 1; j > 0; j-- ){
+					result = InvShiftRows( result );
+					result = InvSubBytes( result );
+					result = AddRoundKey( result, rkey, j );
+					result = InvMixColumns( result );
+				}
+				
+				result = InvSubBytes( result );
+				result = InvShiftRows( result );
+				result = AddRoundKey( result, rkey, 0 );
 				
 				return result;
 			}
@@ -103,37 +116,42 @@ namespace CryptoCL {
 			}
 			
 			/* Protected Functions */
-			void Reference::AddRoundKey( const unsigned int round ) {
-				const DataArray RoundKey = mKey.Value( round );
+			const DataArray Reference::XORBlock( const DataArray& a, const DataArray& b ) const {
+				DataArray result;
 				
-				for( unsigned int i = 0; i < mState.size(); i++ ){
-					mState[i] = mState[i] ^ RoundKey[i];
+				for( unsigned int i = 0; i < a.size(); i++ ){
+					result.push_back( a[i] ^ b[i] );
 				}
+				
+				return result;
+			}
+			
+			const DataArray Reference::AddRoundKey( const DataArray& block, const RoundKey& key, const unsigned int round ) const {
+				return XORBlock( block, key.Value( round ) );
 			}
 					
 			/* Encryption Helpers */
-			void Reference::SubBytes() {
-				for( unsigned int i = 0; i < mState.size(); i++ ){
-					mState[i] = SBox[mState[i]];
+			const DataArray Reference::SubBytes( const DataArray& block ) const {
+				DataArray result( block.size() );
+				
+				for( unsigned int i = 0; i < block.size(); i++ ){
+					result[i] = SBox[block[i]];
 				}
+				
+				return result;
 			}
 			
-			void Reference::ShiftRows() {
-				const DataArray TempState( mState.begin(), mState.end() );
+			const DataArray Reference::ShiftRows( const DataArray& block ) const {
+				DataArray result( block.size() );
+				const DataArray TempState( block.begin(), block.end() );
+				
 				for (unsigned int i = 0; i < 16; i++) {
 					unsigned int row = i % 4;
 					unsigned int k = (i + (row * 4)) % 16;
-					mState[i] = TempState[k];
+					result[i] = TempState[k];
 				}
-			}
-			
-			void MixColumn( DataArray& column, const unsigned int pos ) {
-				const unsigned char a = gmul(column[pos+0],2) ^ gmul(column[pos+3],1) ^ gmul(column[pos+2],1) ^ gmul(column[pos+1],3);
-				const unsigned char b = gmul(column[pos+1],2) ^ gmul(column[pos+0],1) ^ gmul(column[pos+3],1) ^ gmul(column[pos+2],3);
-				const unsigned char c = gmul(column[pos+2],2) ^ gmul(column[pos+1],1) ^ gmul(column[pos+0],1) ^ gmul(column[pos+3],3);
-				const unsigned char d = gmul(column[pos+3],2) ^ gmul(column[pos+2],1) ^ gmul(column[pos+1],1) ^ gmul(column[pos+0],3);
 				
-				column[pos+0] = a; column[pos+1] = b; column[pos+2] = c; column[pos+3] = d;
+				return result;
 			}
 
 			void OptimizedMixColumn( DataArray& column, const unsigned int pos ) {
@@ -147,27 +165,37 @@ namespace CryptoCL {
 				column[pos+0] = a; column[pos+1] = b; column[pos+2] = c; column[pos+3] = d;
 			}
 
-			void Reference::MixColumns() {
-				OptimizedMixColumn( mState, 0 );
-				OptimizedMixColumn( mState, 4 );
-				OptimizedMixColumn( mState, 8 );
-				OptimizedMixColumn( mState, 12 );
+			const DataArray Reference::MixColumns( const DataArray& block ) const {
+				DataArray result( block );
+				
+				OptimizedMixColumn( result, 0 );
+				OptimizedMixColumn( result, 4 );
+				OptimizedMixColumn( result, 8 );
+				OptimizedMixColumn( result, 12 );
+				
+				return result;
 			}
 			
 			/* Decryption Helpers */
-			void Reference::InvSubBytes() {
-				for( unsigned int i = 0; i < mState.size(); i++ ){
-					mState[i] = InvSBox[mState[i]];
+			const DataArray Reference::InvSubBytes( const DataArray& block ) const {
+				DataArray result( block.size() );
+				for( unsigned int i = 0; i < block.size(); i++ ){
+					result[i] = InvSBox[block[i]];
 				}
+				return result;
 			}
 			
-			void Reference::InvShiftRows() {
-				const DataArray TempState( mState.begin(), mState.end() );
+			const DataArray Reference::InvShiftRows( const DataArray& block ) const {
+				DataArray result( block.size() );
+				
+				const DataArray TempState( block );
 				for (unsigned int i = 0; i < 16; i++) {
 					unsigned int row = i % 4;
 					unsigned int k = (i - (row * 4)) % 16;
-					mState[i] = TempState[k];
+					result[i] = TempState[k];
 				}
+				
+				return result;
 			}
 			
 			void InvMixColumn( DataArray& column, const unsigned int pos ){
@@ -179,11 +207,15 @@ namespace CryptoCL {
 				column[pos+0] = a; column[pos+1] = b; column[pos+2] = c; column[pos+3] = d;
 			}
 
-			void Reference::InvMixColumns() {
-				InvMixColumn( mState, 0 );
-				InvMixColumn( mState, 4 );
-				InvMixColumn( mState, 8 );
-				InvMixColumn( mState, 12 );
+			const DataArray Reference::InvMixColumns( const DataArray& block ) const {
+				DataArray result( block );
+				
+				InvMixColumn( result, 0 );
+				InvMixColumn( result, 4 );
+				InvMixColumn( result, 8 );
+				InvMixColumn( result, 12 );
+				
+				return result;
 			}
 		}
 	}

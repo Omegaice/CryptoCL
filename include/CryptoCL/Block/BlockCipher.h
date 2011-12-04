@@ -23,6 +23,8 @@ namespace CryptoCL {
 				
 				const DataArray& InitialisationVector() const;
 				void InitialisationVector( const DataArray& iv );
+			protected:
+				const std::vector<DataArray> SplitArray( const DataArray& array, const unsigned int size ) const;
 		};
 	}
 }
