@@ -19,27 +19,30 @@ namespace tqd{
 namespace CryptoCL {
 	namespace Block {
 		namespace AES {
+			typedef std::map<Mode::BlockMode,tqd::Compute::OpenCL::Program> ProgramMap;
+			
 			class OpenCL : public AESBlockCipher {
 				public:
 					enum EDevice { CPU, GPU };
 				protected:
 					tqd::Compute::OpenCL::Queue *mQueue;
 					tqd::Compute::OpenCL::Context *mContext;
-					std::map<Mode::BlockMode,tqd::Compute::OpenCL::Program> mEncryption;
-					std::map<Mode::BlockMode,tqd::Compute::OpenCL::Program> mDecryption;
+					ProgramMap mEncryption, mDecryption;
 				public:
-					OpenCL( const EDevice deviceType, const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
-					OpenCL( tqd::Compute::OpenCL::Device& device, const Mode::BlockMode mode = Mode::ElectronicCookBook, const DataArray& iv = DataArray() );
+					OpenCL( const EDevice deviceType, const Mode::BlockMode mode = Mode::ElectronicCookBook );
+					OpenCL( tqd::Compute::OpenCL::Device& device, const Mode::BlockMode mode = Mode::ElectronicCookBook );
 					
 					OpenCL( const OpenCL& other );
 					OpenCL& operator=( const OpenCL& other );
 					
 					~OpenCL();
 					
-					const DataArray Encrypt( const DataArray& data );
-					const DataArray Decrypt( const DataArray& data );
+					const DataArray Encrypt( const DataArray& data, const CryptoCL::Key& key, const DataArray& iv = DataArray() ) const;
+					const ArrayVector Encrypt( const ArrayVector& data, const KeyVector& key, const ArrayVector& iv = ArrayVector() ) const;
+					
+					const DataArray Decrypt( const DataArray& data, const CryptoCL::Key& key, const DataArray& iv = DataArray() ) const;
+					const ArrayVector Decrypt( const ArrayVector& data, const KeyVector& key, const ArrayVector& iv = ArrayVector() ) const;
 				protected:
-					void OnInitialise( const RoundKey& key );
 					void Setup( tqd::Compute::OpenCL::Device& device );
 			};
 			

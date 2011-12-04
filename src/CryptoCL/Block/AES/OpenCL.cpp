@@ -24,8 +24,8 @@ namespace CryptoCL {
 				return "Selected OpenCL Device Unavailiable";
 			}
 			
-			OpenCL::OpenCL( const EDevice deviceType, const Mode::BlockMode mode, const DataArray& iv ) 
-				: AESBlockCipher( mode, iv ), mQueue( 0 ), mContext( 0 ) {
+			OpenCL::OpenCL( const EDevice deviceType, const Mode::BlockMode mode ) 
+				: AESBlockCipher( mode ), mQueue( 0 ), mContext( 0 ) {
 				
 				cl_device_type devType = 0;
 				switch( deviceType ){
@@ -70,14 +70,14 @@ namespace CryptoCL {
 				
 			}
 			
-			OpenCL::OpenCL( Device& device, const Mode::BlockMode mode, const DataArray& iv ) 
-				: AESBlockCipher( mode, iv ), mQueue( 0 ), mContext( 0 ) {
+			OpenCL::OpenCL( Device& device, const Mode::BlockMode mode ) 
+				: AESBlockCipher( mode ), mQueue( 0 ), mContext( 0 ) {
 			
 				Setup( device );
 			}
 			
 			OpenCL::OpenCL( const OpenCL& other ) 
-				: AESBlockCipher( other.mMode, other.mInitialisationVector ),
+				: AESBlockCipher( other.mMode ),
 				mQueue( other.mQueue ), mContext( other.mContext ), 
 				mEncryption( other.mEncryption ), mDecryption( other.mDecryption ) {
 			
@@ -87,8 +87,6 @@ namespace CryptoCL {
 				if( this != &other ){
 					// Block Cipher
 					mMode = other.mMode;
-					mInitialised = other.mInitialised;
-					mInitialisationVector = other.mInitialisationVector;
 					
 					// OpenCL
 					mQueue = other.mQueue;
@@ -103,10 +101,6 @@ namespace CryptoCL {
 			OpenCL::~OpenCL() {
 				if( mQueue ) delete mQueue;
 				if( mContext ) delete mContext;
-			}
-			
-			void OpenCL::OnInitialise( const RoundKey& key ) {
-				
 			}
 			
 			void OpenCL::Setup( tqd::Compute::OpenCL::Device& device ) {
@@ -132,7 +126,67 @@ namespace CryptoCL {
 				if( !mDecryption[Mode::CipherBlockChaining].isValid() ) exit( EXIT_FAILURE );
 			}
 						
-			const DataArray OpenCL::Encrypt( const DataArray& data ) {
+			const DataArray OpenCL::Encrypt( const DataArray& data, const CryptoCL::Key& key, const DataArray& iv ) const {
+				DataArray result( data.size() );
+				const RoundKey& rkey = dynamic_cast<const RoundKey&>(key);
+				
+				return result;
+			}
+			
+			const ArrayVector OpenCL::Encrypt( const ArrayVector& data, const KeyVector& key, const ArrayVector& iv ) const {
+				ArrayVector result( data.size() );
+				
+				return result;
+			}
+			
+			const DataArray OpenCL::Decrypt( const DataArray& data, const CryptoCL::Key& key, const DataArray& iv ) const {
+				DataArray result( data.size() );
+				const RoundKey& rkey = dynamic_cast<const RoundKey&>(key);
+				
+				const unsigned int Rounds = rkey.Rounds(), Blocks = data.size() / 16;
+					
+				ReadOnlyBuffer RoundKey( *mContext, rkey.Value() );
+				ReadOnlyBuffer Input( *mContext, data );
+				WriteOnlyBuffer Result( *mContext, data.size() );
+				
+				ReadOnlyBuffer *Previous = 0;
+				if( mMode == Mode::CipherBlockChaining ){
+					DataArray previous;
+					previous.insert( previous.end(), iv.begin(), iv.end() );
+					previous.insert( previous.end(), data.begin(), data.end() - 16 );
+				
+					Previous = new ReadOnlyBuffer( *mContext, previous );
+				}
+				
+				ProgramMap::const_iterator it = mDecryption.find( mMode );
+				if( it != mDecryption.end() ){	
+					Kernel kernel = it->second.GetKernel("decrypt");
+						
+					int param = 0;
+					kernel.Parameter( param++, RoundKey );
+					kernel.Parameter( param++, sizeof( cl_uint ), &Rounds );
+					kernel.Parameter( param++, Input );
+					if( mMode == Mode::CipherBlockChaining ) kernel.Parameter( param++, *Previous );
+					kernel.Parameter( param++, Result );
+					kernel.Parameter( param++, sizeof( cl_uint ), &Blocks );
+						
+					Event cipher = mQueue->RangeKernel( kernel, ( Blocks % 2 == 0 ) ? Blocks : ( Blocks + 1 ) );
+					
+					mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0] );
+					
+					if( mMode == Mode::CipherBlockChaining ) delete Previous;
+				}
+					
+				return result;
+			}
+			
+			const ArrayVector OpenCL::Decrypt( const ArrayVector& data, const KeyVector& key, const ArrayVector& iv ) const {
+				ArrayVector result( data.size() );
+				
+				return result;
+			}
+					
+			/*const DataArray OpenCL::Encrypt( const DataArray& data ) {
 				DataArray result( data.size() );
 				
 				if( isInitialised() ){
@@ -208,46 +262,7 @@ namespace CryptoCL {
 				}
 				
 				return result;
-			}
-						
-			const DataArray OpenCL::Decrypt( const DataArray& data ) {
-				DataArray result( data.size() );
-				
-				if( isInitialised() ) {
-					const unsigned int Rounds = mKey.Rounds(), Blocks = data.size() / 16;
-					
-					ReadOnlyBuffer RoundKey( *mContext, mKey.Value() );
-					ReadOnlyBuffer Input( *mContext, data );
-					WriteOnlyBuffer Result( *mContext, data.size() );
-					
-					ReadOnlyBuffer *Previous = 0;
-					if( mMode == Mode::CipherBlockChaining ){
-						DataArray previous;
-						previous.insert( previous.end(), mInitialisationVector.begin(), mInitialisationVector.end() );
-						previous.insert( previous.end(), data.begin(), data.end() - 16 );
-					
-						Previous = new ReadOnlyBuffer( *mContext, previous );
-					}
-					
-					Kernel kernel = mDecryption[mMode].GetKernel("decrypt");
-						
-					int param = 0;
-					kernel.Parameter( param++, RoundKey );
-					kernel.Parameter( param++, sizeof( cl_uint ), &Rounds );
-					kernel.Parameter( param++, Input );
-					if( mMode == Mode::CipherBlockChaining ) kernel.Parameter( param++, *Previous );
-					kernel.Parameter( param++, Result );
-					kernel.Parameter( param++, sizeof( cl_uint ), &Blocks );
-						
-					Event cipher = mQueue->RangeKernel( kernel, ( Blocks % 2 == 0 ) ? Blocks : ( Blocks + 1 ) );
-					
-					mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0] );
-					
-					if( mMode == Mode::CipherBlockChaining ) delete Previous;
-				}
-				
-				return result;
-			}
+			}*/
 		}
 	}
 }
