@@ -62,65 +62,53 @@ namespace CryptoCL {
 				return result;
 			}
 			
-			const DataArray Reference::Encrypt( const DataArray& block, const RoundKey& rkey ) {
+			const DataArray Reference::Encrypt( const DataArray& block, const RoundKey& rkey ) const {
 				DataArray result( block );
 				
 				result = AddRoundKey( result, rkey, 0 );
-					
+				
 				for( unsigned int j = 1; j < mKey.Rounds(); j++ ){
-					result = SubBytes( result );
-					result = ShiftRows( result );
-					result = MixColumns( result );
-					result = AddRoundKey( result, rkey, j );
+					result = AddRoundKey( MixColumns( ShiftRows( SubBytes( result ) ) ), rkey, j );
 				}
 				
-				result = SubBytes( result );
-				result = ShiftRows( result );
-				result = AddRoundKey( result, rkey, rkey.Rounds() );
+				result = AddRoundKey( ShiftRows( SubBytes( result ) ), rkey, rkey.Rounds() );
 				
 				return result;
 			}
 			
-			const DataArray Reference::Decrypt( const DataArray& block, const RoundKey& rkey ) {
+			const DataArray Reference::Decrypt( const DataArray& block, const RoundKey& rkey ) const {
 				DataArray result( block );
 				
 				result = AddRoundKey( result, rkey, rkey.Rounds() );
-				for( unsigned int j = mKey.Rounds() - 1; j > 0; j-- ){
-					result = InvShiftRows( result );
-					result = InvSubBytes( result );
-					result = AddRoundKey( result, rkey, j );
-					result = InvMixColumns( result );
-				}
 				
-				result = InvSubBytes( result );
-				result = InvShiftRows( result );
-				result = AddRoundKey( result, rkey, 0 );
+				for( unsigned int j = mKey.Rounds() - 1; j > 0; j-- ){
+					result = InvMixColumns( AddRoundKey( InvSubBytes( InvShiftRows( result ) ), rkey, j ) );
+				}
+			
+				result = AddRoundKey(  InvShiftRows( InvSubBytes( result ) ), rkey, 0 );
 				
 				return result;
 			}
 			
 			/* General Helper Functions */
-			unsigned char gmul(unsigned char a, unsigned char b) {
-				unsigned char p = 0;
-				unsigned char hi_bit_set;
+			const unsigned char gmul( const unsigned char a, const unsigned char b ) {
+				unsigned char p = 0, aBit = a, bBit = b, hi_bit_set = 0;
 				for(unsigned char counter = 0; counter < 8; counter++) {
-					if((b & 1) == 1) 
-						p ^= a;
-					hi_bit_set = (a & 0x80);
-					a <<= 1;
-					if(hi_bit_set == 0x80) 
-						a ^= 0x1b;		
-					b >>= 1;
+					if((bBit & 1) == 1) p ^= aBit;
+					hi_bit_set = (aBit & 0x80);
+					aBit <<= 1;
+					if(hi_bit_set == 0x80) aBit ^= 0x1b;		
+					bBit >>= 1;
 				}
 				return p;
 			}
 			
 			/* Protected Functions */
 			const DataArray Reference::XORBlock( const DataArray& a, const DataArray& b ) const {
-				DataArray result;
+				DataArray result( a.size() );
 				
 				for( unsigned int i = 0; i < a.size(); i++ ){
-					result.push_back( a[i] ^ b[i] );
+					result[i] = a[i] ^ b[i];
 				}
 				
 				return result;

@@ -14,8 +14,8 @@ namespace CryptoCL {
 					const DataArray Decrypt( const DataArray& data );
 				protected:
 					/* Block Functions */
-					const DataArray Encrypt( const DataArray& block, const RoundKey& rkey );
-					const DataArray Decrypt( const DataArray& block, const RoundKey& rkey );
+					const DataArray Encrypt( const DataArray& block, const RoundKey& rkey ) const;
+					const DataArray Decrypt( const DataArray& block, const RoundKey& rkey ) const;
 					
 					const DataArray XORBlock( const DataArray& a, const DataArray& b ) const;
 					const DataArray AddRoundKey( const DataArray& block, const RoundKey& key, const unsigned int round ) const;
