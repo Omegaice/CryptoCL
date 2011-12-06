@@ -109,26 +109,28 @@ namespace CryptoCL {
 				mContext = new Context( device );
 				mQueue = new Queue( *mContext, device );
 				
-				// Encryption ECB
-				mEncryption[Mode::ElectronicCookBook] = CreateProgramFromFile( *mContext, device, "data/block/ecb/aes/encrypt.cl" );
-				if( !mEncryption[Mode::ElectronicCookBook].isValid() ) exit( EXIT_FAILURE );
+				mEncryption = CreateProgramFromFile( *mContext, device, "data/block/aes/encrypt.cl" );
+				if( !mEncryption.isValid() ) exit( EXIT_FAILURE );
 				
-				// Decryption ECB
-				mDecryption[Mode::ElectronicCookBook] = CreateProgramFromFile( *mContext, device, "data/block/ecb/aes/decrypt.cl" );
-				if( !mDecryption[Mode::ElectronicCookBook].isValid() ) exit( EXIT_FAILURE );
+				mDecryption = CreateProgramFromFile( *mContext, device, "data/block/aes/decrypt.cl" );
+				if( !mDecryption.isValid() ) exit( EXIT_FAILURE );
 				
-				// Encryption CBC
-				mEncryption[Mode::CipherBlockChaining] = CreateProgramFromFile( *mContext, device, "data/block/cbc/aes/encrypt.cl" );
-				if( !mEncryption[Mode::CipherBlockChaining].isValid() ) exit( EXIT_FAILURE );
-				
-				// Decryption CBC
-				mDecryption[Mode::CipherBlockChaining] = CreateProgramFromFile( *mContext, device, "data/block/cbc/aes/decrypt.cl" );
-				if( !mDecryption[Mode::CipherBlockChaining].isValid() ) exit( EXIT_FAILURE );
+				mCBC = CreateProgramFromFile( *mContext, device, "data/block/cbc.cl" );
+				if( !mCBC.isValid() ) exit( EXIT_FAILURE );
 			}
 						
 			const DataArray OpenCL::Encrypt( const DataArray& data, const CryptoCL::Key& key, const DataArray& iv ) const {
 				DataArray result( data.size() );
-				const RoundKey& rkey = dynamic_cast<const RoundKey&>(key);
+				
+				Event read;
+				
+				if( mMode == Mode::ElectronicCookBook ){
+					read = EncryptChunk( data, result, key );
+				}else{
+					read = EncryptChunkCBC( data, result, key, iv );
+				}
+				
+				read.Wait();
 				
 				return result;
 			}
@@ -136,133 +138,180 @@ namespace CryptoCL {
 			const ArrayVector OpenCL::Encrypt( const ArrayVector& data, const KeyVector& key, const ArrayVector& iv ) const {
 				ArrayVector result( data.size() );
 				
+				EventList list;
+				for( unsigned int i = 0; i < data.size(); i++ ){
+					result[i].resize( data[i].size() );
+					
+					Event cipher;
+					if( mMode == Mode::ElectronicCookBook ){
+						cipher = EncryptChunk( data[i], result[i], *key[i] );
+					}else{
+						cipher = EncryptChunkCBC( data[i], result[i], *key[i], iv[i] );
+					}
+					list.push_back( cipher );
+				}
+				Wait( list );
+				
 				return result;
 			}
 			
-			const DataArray OpenCL::Decrypt( const DataArray& data, const CryptoCL::Key& key, const DataArray& iv ) const {
-				DataArray result( data.size() );
+			const Event OpenCL::EncryptChunk( const DataArray& data, DataArray& result, const CryptoCL::Key& key, const DataArray& iv ) const {
 				const RoundKey& rkey = dynamic_cast<const RoundKey&>(key);
-				
 				const unsigned int Rounds = rkey.Rounds(), Blocks = data.size() / 16;
 					
 				ReadOnlyBuffer RoundKey( *mContext, rkey.Value() );
 				ReadOnlyBuffer Input( *mContext, data );
-				WriteOnlyBuffer Result( *mContext, data.size() );
+				ReadWriteBuffer Result( *mContext, data.size() );
 				
-				ReadOnlyBuffer *Previous = 0;
-				if( mMode == Mode::CipherBlockChaining ){
-					DataArray previous;
-					previous.insert( previous.end(), iv.begin(), iv.end() );
-					previous.insert( previous.end(), data.begin(), data.end() - 16 );
-				
-					Previous = new ReadOnlyBuffer( *mContext, previous );
+				EventList list;
+				for( unsigned int i = 0; i < Blocks; i++ ){
+					Event block = EncryptBlock( RoundKey, Input, Result, Rounds, i );
+					list.push_back( block );
 				}
 				
-				ProgramMap::const_iterator it = mDecryption.find( mMode );
-				if( it != mDecryption.end() ){	
-					Kernel kernel = it->second.GetKernel("decrypt");
-						
-					int param = 0;
-					kernel.Parameter( param++, RoundKey );
-					kernel.Parameter( param++, sizeof( cl_uint ), &Rounds );
-					kernel.Parameter( param++, Input );
-					if( mMode == Mode::CipherBlockChaining ) kernel.Parameter( param++, *Previous );
-					kernel.Parameter( param++, Result );
-					kernel.Parameter( param++, sizeof( cl_uint ), &Blocks );
-						
-					Event cipher = mQueue->RangeKernel( kernel, ( Blocks % 2 == 0 ) ? Blocks : ( Blocks + 1 ) );
+				return mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0], list );
+			}
+			
+			const Event OpenCL::EncryptChunkCBC( const DataArray& data, DataArray& result, const CryptoCL::Key& key, const DataArray& iv ) const {
+				const RoundKey& rkey = dynamic_cast<const RoundKey&>(key);
+				const unsigned int Rounds = rkey.Rounds(), Blocks = data.size() / 16;
 					
-					mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0] );
-					
-					if( mMode == Mode::CipherBlockChaining ) delete Previous;
+				ReadOnlyBuffer RoundKey( *mContext, rkey.Value() );
+				ReadOnlyBuffer Input( *mContext, data );
+				ReadWriteBuffer Result( *mContext, data.size() );
+				
+				DataArray previous( iv );
+				previous.resize( data.size() );
+				ReadOnlyBuffer Previous( *mContext, previous );
+				
+				Event block = EncryptBlock( RoundKey, Input, Result, Rounds, 0, XORBlock( Input, 0, Previous, 0, Event() ) );
+				for( unsigned int i = 1; i < Blocks; i++ ){
+					block = EncryptBlock( RoundKey, Input, Result, Rounds, i, XORBlock( Input, i, Result, i-1, block ) );
 				}
-					
+				
+				return mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0], block );
+			}
+			
+			const Event OpenCL::EncryptBlock( const Buffer& key, const Buffer& input, const Buffer& result, unsigned int rounds, unsigned int block, const Event& event ) const {
+				Kernel kernel = mEncryption.GetKernel( "encrypt" );
+				
+				kernel.Parameter( 0, key );
+				kernel.Parameter( 1, sizeof(cl_int), &rounds );
+				kernel.Parameter( 2, input );
+				kernel.Parameter( 3, result );
+				kernel.Parameter( 4, sizeof( cl_int ), &block );
+				
+				EventList list;
+				if( event.isValid() ){
+					list.push_back( event );
+				}
+				
+				return mQueue->RangeKernel( kernel, 1, list );
+			}
+			
+			const DataArray OpenCL::Decrypt( const DataArray& data, const CryptoCL::Key& key, const DataArray& iv ) const {
+				DataArray result( data.size() );
+				
+				Event read;
+				
+				if( mMode == Mode::ElectronicCookBook ){
+					read = DecryptChunk( data, result, key );
+				}else{
+					read = DecryptChunkCBC( data, result, key, iv );
+				}
+				
+				read.Wait();
+									
 				return result;
 			}
 			
 			const ArrayVector OpenCL::Decrypt( const ArrayVector& data, const KeyVector& key, const ArrayVector& iv ) const {
 				ArrayVector result( data.size() );
 				
+				EventList list;
+				for( unsigned int i = 0; i < data.size(); i++ ){
+					result[i].resize( data[i].size() );
+					
+					Event cipher;
+					if( mMode == Mode::ElectronicCookBook ){
+						cipher = DecryptChunk( data[i], result[i], *key[i] );
+					}else{
+						cipher = DecryptChunkCBC( data[i], result[i], *key[i], iv[i] );
+					}
+					list.push_back( cipher );
+				}
+				Wait( list );
+				
 				return result;
 			}
+			
+			const Event OpenCL::DecryptChunk( const DataArray& data, DataArray& result, const CryptoCL::Key& key ) const {
+				const RoundKey& rkey = dynamic_cast<const RoundKey&>(key);
+				const unsigned int Rounds = rkey.Rounds(), Blocks = data.size() / 16;
 					
-			/*const DataArray OpenCL::Encrypt( const DataArray& data ) {
-				DataArray result( data.size() );
-				
-				if( isInitialised() ){
-					const unsigned int Rounds = mKey.Rounds();
-					DataArray inData( data ), roundKey( mKey.Value() );
-					const size_t blockCount = data.size() / 16;
-					
-					ReadOnlyBuffer RoundKey( *mContext, sizeof( unsigned char ) * roundKey.size(), &roundKey[0] );				
-					
-					Kernel kernel = mEncryption[mMode].GetKernel( "encrypt" );
-										
-					if( mMode != Mode::CipherBlockChaining ){
-						WriteOnlyBuffer Result( *mContext, sizeof( unsigned char ) * inData.size() );
-						ReadOnlyBuffer Input( *mContext, sizeof( unsigned char ) * inData.size(), &inData[0] );
-						
-						bool paramSuccess = kernel.Parameter( 0, RoundKey );
-						paramSuccess |= kernel.Parameter( 1, sizeof( cl_uint ), &Rounds );
-						paramSuccess |= kernel.Parameter( 2, Input );
-						paramSuccess |= kernel.Parameter( 3, Result );
-						paramSuccess |= kernel.Parameter( 4, sizeof( cl_uint ), &blockCount );
-						
-						if( !paramSuccess ) {
-							std::cerr << "Parameters Invalid" << std::endl;
-							throw std::exception();
-						}
-
-						mQueue->RangeKernel( kernel, ( blockCount % 2 == 0 ) ? blockCount : ( blockCount + 1 ) );
-				
-						mQueue->ReadBuffer( Result, sizeof( char ) * inData.size(), &result[0] );
-					}else{
-						const unsigned int blocks = data.size() / 16;
-						
-						for( unsigned int i = 0; i < blocks; i++ ){
-							const unsigned int sPos = i * 16;
-							
-							DataArray inData( data.begin() + sPos, data.begin() + sPos + 16 );
-							
-							if( mMode == Mode::CipherBlockChaining ) {
-									if( i == 0 ) {
-											for(unsigned int s = 0; s < 16; s++ ) inData[s] ^= mInitialisationVector[s];
-									}else{
-											for(unsigned int s = 0; s < 16; s++ ) inData[s] ^= result[sPos-16+s];
-									}
-							}
-							
-							
-							ReadOnlyBuffer Input( *mContext, sizeof( unsigned char ) * inData.size(), &inData[0] );
-							WriteOnlyBuffer Result( *mContext, sizeof( unsigned char ) * inData.size() );
-							
-							bool paramSuccess = kernel.Parameter( 0, RoundKey );
-							paramSuccess |= kernel.Parameter( 1, sizeof( cl_uint ), &Rounds );
-							paramSuccess |= kernel.Parameter( 2, Input );
-							paramSuccess |= kernel.Parameter( 3, Result );
-							
-							int blockCount = 1;
-							paramSuccess |= kernel.Parameter( 4, sizeof( cl_int ), &blockCount );
-							
-							if( !paramSuccess ) {
-								std::cerr << "Parameters Invalid" << std::endl;
-								throw std::exception();
-							}
-							
-							mQueue->RangeKernel( kernel, 1, 1 );
-							
-							DataArray outData( inData.size() );
-							mQueue->ReadBuffer( Result, sizeof( unsigned char ) * outData.size(), &outData[0] );
-							
-							for( unsigned int i = 0; i < 16; i++ ){
-								result[sPos+i] = outData[i];
-							}
-						}
-					}
+				ReadOnlyBuffer RoundKey( *mContext, rkey.Value() );
+				ReadOnlyBuffer Input( *mContext, data );
+				ReadWriteBuffer Result( *mContext, data.size() );
+								
+				EventList list;
+				for( unsigned int i = 0; i < Blocks; i++ ){
+					list.push_back( DecryptBlock( RoundKey, Input, Result, Rounds, i ) );
 				}
 				
-				return result;
-			}*/
+				return mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0], list );
+			}
+			
+			const Event OpenCL::DecryptChunkCBC( const DataArray& data, DataArray& result, const CryptoCL::Key& key, const DataArray& iv ) const {
+				const RoundKey& rkey = dynamic_cast<const RoundKey&>(key);
+				const unsigned int Rounds = rkey.Rounds(), Blocks = data.size() / 16;
+					
+				ReadOnlyBuffer RoundKey( *mContext, rkey.Value() );
+				ReadOnlyBuffer Input( *mContext, data );
+				ReadWriteBuffer Result( *mContext, data.size() );
+				
+				DataArray previous;
+				previous.insert( previous.end(), iv.begin(), iv.end() );
+				previous.insert( previous.end(), data.begin(), data.end() - 16 );
+				
+				ReadOnlyBuffer Previous( *mContext, previous );
+								
+				EventList list;
+				for( unsigned int i = 0; i < Blocks; i++ ){
+					list.push_back( XORBlock( Result, i, Previous, i, DecryptBlock( RoundKey, Input, Result, Rounds, i ) ) );
+				}
+				
+				return mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0], list );
+			}
+			
+			const Event OpenCL::DecryptBlock( const Buffer& key, const Buffer& input, const Buffer& result, unsigned int rounds, unsigned int block ) const {
+				Kernel kernel = mDecryption.GetKernel( "decrypt" );
+				
+				kernel.Parameter( 0, key );
+				kernel.Parameter( 1, sizeof(cl_int), &rounds );
+				kernel.Parameter( 2, input );
+				kernel.Parameter( 3, result );
+				kernel.Parameter( 4, sizeof( cl_int ), &block );
+				
+				return mQueue->RangeKernel( kernel, 1 );
+			}
+			
+			const Event OpenCL::XORBlock( const Buffer& block, const size_t blockOffset, const Buffer& value, const size_t valOffset, const Event& event ) const {
+				Kernel kernel = mCBC.GetKernel( "CipherBlockChain" );
+				
+				kernel.Parameter( 0, block );
+				kernel.Parameter( 1, sizeof( cl_int ), &blockOffset );
+				kernel.Parameter( 2, value );
+				kernel.Parameter( 3, sizeof( cl_int ), &valOffset );
+				
+				Event retVal;
+				if( !event.isValid() ){
+					retVal = mQueue->RangeKernel( kernel, 1 );
+				}else{
+					retVal = mQueue->RangeKernel( kernel, 1, event );
+				}
+			
+				return retVal;
+			}
 		}
 	}
 }

@@ -12,6 +12,18 @@ namespace AES {
 	using namespace CryptoCL;
 	using namespace CryptoCL::Block::AES;
 	
+	static void AssertArray( const DataArray& expected, const DataArray& result ){
+		CPPUNIT_ASSERT_EQUAL_MESSAGE( "Array Size Differs", (int)expected.size(), (int)result.size() );
+	
+		const unsigned int size = expected.size();
+		for( unsigned int i = 0; i < size; i++ ){
+			std::ostringstream stream;
+			stream << "Element " << i << " Differs";
+			
+			CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+		}
+	}
+	
 	// 128 Bit Tests
 	static unsigned char Key128[] = {
 		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
@@ -43,12 +55,38 @@ namespace AES {
 			
 			const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ), RoundKey128 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 16 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryption128CPUMulti() {
+		const unsigned char data[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const unsigned char expected[] = {
+			0x69,0xc4,0xe0,0xd8,0x6a,0x7b,0x04,0x30,0xd8,0xcd,0xb7,0x80,0x70,0xb4,0xc5,0x5a
+		};
+		
+		const DataArray aData( data, data + 16 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &RoundKey128 );
+		kvKey.push_back( &RoundKey128 );
+		
+		try{
+			OpenCL cipher( OpenCL::CPU );
+			
+			const ArrayVector result = cipher.Encrypt( avData, kvKey );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 16 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -71,12 +109,44 @@ namespace AES {
 			
 			const DataArray result = cipher.Encrypt( DataArray( data, data + 32 ), CBCRoundKey128, IVArray128 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 32 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryptionCBC128CPUMulti() {
+		const unsigned char data[] = { 
+			0x94, 0x9f, 0x22, 0xbb, 0xe9, 0xaa, 0x15, 0xbc, 0x12, 0x4b, 0x3d, 0x71, 0xc3, 0xf2, 0xd9, 0xa1, 
+			0x53, 0x4c, 0x8c, 0x4b, 0x7c, 0x10, 0x7c, 0x36, 0xf7, 0x28, 0xff, 0xc0, 0xee, 0x50, 0x63, 0xe5
+		};
+		
+		const unsigned char expected[] = {
+			0x7c, 0x39, 0xc9, 0x12, 0xb3, 0x8f, 0xef, 0x32, 0x49, 0x20, 0x1d, 0x93, 0xcf, 0x7f, 0xa9, 0xbe, 
+			0x2e, 0x28, 0xd9, 0x9a, 0xfb, 0xfb, 0x36, 0x69, 0x68, 0xf3, 0x0b, 0xa0, 0x18, 0xed, 0x48, 0x59
+		};
+		
+		const DataArray aData( data, data + 32 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		ArrayVector avIV;
+		avIV.push_back( IVArray128 );
+		avIV.push_back( IVArray128 );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &CBCRoundKey128 );
+		kvKey.push_back( &CBCRoundKey128 );
+		
+		try{
+			OpenCL cipher( OpenCL::CPU, Block::Mode::CipherBlockChaining );
+			
+			const ArrayVector result = cipher.Encrypt( avData, kvKey, avIV );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 32 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -97,12 +167,38 @@ namespace AES {
 			
 			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ), RoundKey128 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 16 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryption128CPUMulti() {
+		const unsigned char data[] = {
+			0x69,0xc4,0xe0,0xd8,0x6a,0x7b,0x04,0x30,0xd8,0xcd,0xb7,0x80,0x70,0xb4,0xc5,0x5a
+		};
+		
+		const unsigned char expected[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const DataArray aData( data, data + 16 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &RoundKey128 );
+		kvKey.push_back( &RoundKey128 );
+		
+		try{
+			OpenCL cipher( OpenCL::CPU );
+			
+			const ArrayVector result = cipher.Decrypt( avData, kvKey );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 16 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -125,12 +221,44 @@ namespace AES {
 			
 			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ), CBCRoundKey128, IVArray128 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 16 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryptionCBC128CPUMulti() {
+		const unsigned char data[] = {
+			0x7c, 0x39, 0xc9, 0x12, 0xb3, 0x8f, 0xef, 0x32, 0x49, 0x20, 0x1d, 0x93, 0xcf, 0x7f, 0xa9, 0xbe, 
+			0x2e, 0x28, 0xd9, 0x9a, 0xfb, 0xfb, 0x36, 0x69, 0x68, 0xf3, 0x0b, 0xa0, 0x18, 0xed, 0x48, 0x59
+		};
+		
+		const unsigned char expected[] = { 
+			0x94, 0x9f, 0x22, 0xbb, 0xe9, 0xaa, 0x15, 0xbc, 0x12, 0x4b, 0x3d, 0x71, 0xc3, 0xf2, 0xd9, 0xa1, 
+			0x53, 0x4c, 0x8c, 0x4b, 0x7c, 0x10, 0x7c, 0x36, 0xf7, 0x28, 0xff, 0xc0, 0xee, 0x50, 0x63, 0xe5
+		};
+		
+		const DataArray aData( data, data + 32 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		ArrayVector avIV;
+		avIV.push_back( IVArray128 );
+		avIV.push_back( IVArray128 );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &CBCRoundKey128 );
+		kvKey.push_back( &CBCRoundKey128 );
+		
+		try{
+			OpenCL cipher( OpenCL::CPU, Block::Mode::CipherBlockChaining );
+			
+			const ArrayVector result = cipher.Decrypt( avData, kvKey, avIV );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 32 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -151,12 +279,38 @@ namespace AES {
 			
 			const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ), RoundKey128 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 16 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryption128GPUMulti() {
+		const unsigned char data[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const unsigned char expected[] = {
+			0x69,0xc4,0xe0,0xd8,0x6a,0x7b,0x04,0x30,0xd8,0xcd,0xb7,0x80,0x70,0xb4,0xc5,0x5a
+		};
+		
+		const DataArray aData( data, data + 16 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &RoundKey128 );
+		kvKey.push_back( &RoundKey128 );
+		
+		try{
+			OpenCL cipher( OpenCL::GPU );
+			
+			const ArrayVector result = cipher.Encrypt( avData, kvKey );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 16 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -179,12 +333,44 @@ namespace AES {
 			
 			const DataArray result = cipher.Encrypt( DataArray( data, data + 32 ), CBCRoundKey128, IVArray128 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 32 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryptionCBC128GPUMulti() {
+		const unsigned char data[] = { 
+			0x94, 0x9f, 0x22, 0xbb, 0xe9, 0xaa, 0x15, 0xbc, 0x12, 0x4b, 0x3d, 0x71, 0xc3, 0xf2, 0xd9, 0xa1, 
+			0x53, 0x4c, 0x8c, 0x4b, 0x7c, 0x10, 0x7c, 0x36, 0xf7, 0x28, 0xff, 0xc0, 0xee, 0x50, 0x63, 0xe5
+		};
+		
+		const unsigned char expected[] = {
+			0x7c, 0x39, 0xc9, 0x12, 0xb3, 0x8f, 0xef, 0x32, 0x49, 0x20, 0x1d, 0x93, 0xcf, 0x7f, 0xa9, 0xbe, 
+			0x2e, 0x28, 0xd9, 0x9a, 0xfb, 0xfb, 0x36, 0x69, 0x68, 0xf3, 0x0b, 0xa0, 0x18, 0xed, 0x48, 0x59
+		};
+		
+		const DataArray aData( data, data + 32 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		ArrayVector avIV;
+		avIV.push_back( IVArray128 );
+		avIV.push_back( IVArray128 );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &CBCRoundKey128 );
+		kvKey.push_back( &CBCRoundKey128 );
+		
+		try{
+			OpenCL cipher( OpenCL::GPU, Block::Mode::CipherBlockChaining );
+			
+			const ArrayVector result = cipher.Encrypt( avData, kvKey, avIV );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 32 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -205,17 +391,43 @@ namespace AES {
 			
 			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ), RoundKey128 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
-			}
+			AssertArray( DataArray( expected, expected + 16 ), result );
 		}catch( DeviceUnavailiable& e ){
 		
 		}
 	}	
+	
+	void OpenCLTest::testDecryption128GPUMulti() {
+		const unsigned char data[] = {
+			0x69,0xc4,0xe0,0xd8,0x6a,0x7b,0x04,0x30,0xd8,0xcd,0xb7,0x80,0x70,0xb4,0xc5,0x5a
+		};
+		
+		const unsigned char expected[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const DataArray aData( data, data + 16 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &RoundKey128 );
+		kvKey.push_back( &RoundKey128 );
+		
+		try{
+			OpenCL cipher( OpenCL::GPU );
+			
+			const ArrayVector result = cipher.Decrypt( avData, kvKey );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 16 ), result[i] );
+			}
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
 	
 	void OpenCLTest::testDecryptionCBC128GPU() {
 		const unsigned char data[] = {
@@ -233,12 +445,44 @@ namespace AES {
 			
 			const DataArray result = cipher.Decrypt( DataArray( data, data + 32 ), CBCRoundKey128, IVArray128 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 32 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryptionCBC128GPUMulti() {
+		const unsigned char data[] = {
+			0x7c, 0x39, 0xc9, 0x12, 0xb3, 0x8f, 0xef, 0x32, 0x49, 0x20, 0x1d, 0x93, 0xcf, 0x7f, 0xa9, 0xbe, 
+			0x2e, 0x28, 0xd9, 0x9a, 0xfb, 0xfb, 0x36, 0x69, 0x68, 0xf3, 0x0b, 0xa0, 0x18, 0xed, 0x48, 0x59
+		};
+		
+		const unsigned char expected[] = { 
+			0x94, 0x9f, 0x22, 0xbb, 0xe9, 0xaa, 0x15, 0xbc, 0x12, 0x4b, 0x3d, 0x71, 0xc3, 0xf2, 0xd9, 0xa1, 
+			0x53, 0x4c, 0x8c, 0x4b, 0x7c, 0x10, 0x7c, 0x36, 0xf7, 0x28, 0xff, 0xc0, 0xee, 0x50, 0x63, 0xe5
+		};
+		
+		const DataArray aData( data, data + 32 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		ArrayVector avIV;
+		avIV.push_back( IVArray128 );
+		avIV.push_back( IVArray128 );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &CBCRoundKey128 );
+		kvKey.push_back( &CBCRoundKey128 );
+		
+		try{
+			OpenCL cipher( OpenCL::GPU, Block::Mode::CipherBlockChaining );
+			
+			const ArrayVector result = cipher.Decrypt( avData, kvKey, avIV );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 32 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -278,12 +522,38 @@ namespace AES {
 			
 			const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ), RoundKey192 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 16 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryption192CPUMulti() {
+		const unsigned char data[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const unsigned char expected[] = {
+			0xdd,0xa9,0x7c,0xa4,0x86,0x4c,0xdf,0xe0,0x6e,0xaf,0x70,0xa0,0xec,0x0d,0x71,0x91 
+		};
+		
+		const DataArray aData( data, data + 16 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &RoundKey192 );
+		kvKey.push_back( &RoundKey192 );
+		
+		try{
+			OpenCL cipher( OpenCL::CPU );
+			
+			const ArrayVector result = cipher.Encrypt( avData, kvKey );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 16 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -306,12 +576,44 @@ namespace AES {
 			
 			const DataArray result = cipher.Encrypt( DataArray( data, data + 32 ), CBCRoundKey192, IVArray192 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 32 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryptionCBC192CPUMulti() {
+		const unsigned char data[] = { 
+			0x69, 0xdc, 0x07, 0xf9, 0xd4, 0x05, 0x45, 0x83, 0x59, 0x6d, 0x77, 0x81, 0x45, 0x20, 0x20, 0xa5, 
+			0x08, 0xc0, 0xc7, 0xc0, 0xf3, 0xd0, 0x72, 0xce, 0x58, 0x26, 0x84, 0x7f, 0x4f, 0xfd, 0x01, 0xd6
+		};
+		
+		const unsigned char expected[] = {
+			0x46, 0xcb, 0xa5, 0xc5, 0x9d, 0x69, 0xee, 0x30, 0x17, 0xa2, 0xfa, 0x1e, 0x37, 0xfb, 0x15, 0xed, 
+			0xe3, 0x2b, 0x06, 0x61, 0xec, 0xa8, 0x4b, 0x2b, 0xf8, 0x80, 0x88, 0x15, 0xac, 0x66, 0x30, 0x22
+		};
+		
+		const DataArray aData( data, data + 32 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		ArrayVector avIV;
+		avIV.push_back( IVArray192 );
+		avIV.push_back( IVArray192 );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &CBCRoundKey192 );
+		kvKey.push_back( &CBCRoundKey192 );
+		
+		try{
+			OpenCL cipher( OpenCL::CPU, Block::Mode::CipherBlockChaining );
+			
+			const ArrayVector result = cipher.Encrypt( avData, kvKey, avIV );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 32 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -332,12 +634,38 @@ namespace AES {
 			
 			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ), RoundKey192 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 16 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryption192CPUMulti() {
+		const unsigned char data[] = {
+			0xdd,0xa9,0x7c,0xa4,0x86,0x4c,0xdf,0xe0,0x6e,0xaf,0x70,0xa0,0xec,0x0d,0x71,0x91
+		};
+		
+		const unsigned char expected[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const DataArray aData( data, data + 16 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &RoundKey192 );
+		kvKey.push_back( &RoundKey192 );
+		
+		try{
+			OpenCL cipher( OpenCL::CPU );
+			
+			const ArrayVector result = cipher.Decrypt( avData, kvKey );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 16 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -360,12 +688,44 @@ namespace AES {
 			
 			const DataArray result = cipher.Decrypt( DataArray( data, data + 32 ), CBCRoundKey192, IVArray192 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 32 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryptionCBC192CPUMulti() {
+		const unsigned char data[] = {
+			0x46, 0xcb, 0xa5, 0xc5, 0x9d, 0x69, 0xee, 0x30, 0x17, 0xa2, 0xfa, 0x1e, 0x37, 0xfb, 0x15, 0xed, 
+			0xe3, 0x2b, 0x06, 0x61, 0xec, 0xa8, 0x4b, 0x2b, 0xf8, 0x80, 0x88, 0x15, 0xac, 0x66, 0x30, 0x22
+		};
+		
+		const unsigned char expected[] = { 
+			0x69, 0xdc, 0x07, 0xf9, 0xd4, 0x05, 0x45, 0x83, 0x59, 0x6d, 0x77, 0x81, 0x45, 0x20, 0x20, 0xa5, 
+			0x08, 0xc0, 0xc7, 0xc0, 0xf3, 0xd0, 0x72, 0xce, 0x58, 0x26, 0x84, 0x7f, 0x4f, 0xfd, 0x01, 0xd6
+		};
+		
+		const DataArray aData( data, data + 32 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		ArrayVector avIV;
+		avIV.push_back( IVArray192 );
+		avIV.push_back( IVArray192 );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &CBCRoundKey192 );
+		kvKey.push_back( &CBCRoundKey192 );
+		
+		try{
+			OpenCL cipher( OpenCL::CPU, Block::Mode::CipherBlockChaining );
+			
+			const ArrayVector result = cipher.Decrypt( avData, kvKey, avIV );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 32 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -386,12 +746,38 @@ namespace AES {
 			
 			const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ), RoundKey192 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 16 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryption192GPUMulti() {
+		const unsigned char data[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const unsigned char expected[] = {
+			0xdd,0xa9,0x7c,0xa4,0x86,0x4c,0xdf,0xe0,0x6e,0xaf,0x70,0xa0,0xec,0x0d,0x71,0x91 
+		};
+		
+		const DataArray aData( data, data + 16 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &RoundKey192 );
+		kvKey.push_back( &RoundKey192 );
+		
+		try{
+			OpenCL cipher( OpenCL::GPU );
+			
+			const ArrayVector result = cipher.Encrypt( avData, kvKey );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 16 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -414,12 +800,44 @@ namespace AES {
 			
 			const DataArray result = cipher.Encrypt( DataArray( data, data + 32 ), CBCRoundKey192, IVArray192 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 32 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryptionCBC192GPUMulti() {
+		const unsigned char data[] = { 
+			0x69, 0xdc, 0x07, 0xf9, 0xd4, 0x05, 0x45, 0x83, 0x59, 0x6d, 0x77, 0x81, 0x45, 0x20, 0x20, 0xa5, 
+			0x08, 0xc0, 0xc7, 0xc0, 0xf3, 0xd0, 0x72, 0xce, 0x58, 0x26, 0x84, 0x7f, 0x4f, 0xfd, 0x01, 0xd6
+		};
+		
+		const unsigned char expected[] = {
+			0x46, 0xcb, 0xa5, 0xc5, 0x9d, 0x69, 0xee, 0x30, 0x17, 0xa2, 0xfa, 0x1e, 0x37, 0xfb, 0x15, 0xed, 
+			0xe3, 0x2b, 0x06, 0x61, 0xec, 0xa8, 0x4b, 0x2b, 0xf8, 0x80, 0x88, 0x15, 0xac, 0x66, 0x30, 0x22
+		};
+		
+		const DataArray aData( data, data + 32 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		ArrayVector avIV;
+		avIV.push_back( IVArray192 );
+		avIV.push_back( IVArray192 );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &CBCRoundKey192 );
+		kvKey.push_back( &CBCRoundKey192 );
+		
+		try{
+			OpenCL cipher( OpenCL::GPU, Block::Mode::CipherBlockChaining );
+			
+			const ArrayVector result = cipher.Encrypt( avData, kvKey, avIV );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 32 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -440,12 +858,38 @@ namespace AES {
 			
 			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ), RoundKey192 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 16 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryption192GPUMulti() {
+		const unsigned char data[] = {
+			0xdd,0xa9,0x7c,0xa4,0x86,0x4c,0xdf,0xe0,0x6e,0xaf,0x70,0xa0,0xec,0x0d,0x71,0x91
+		};
+		
+		const unsigned char expected[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const DataArray aData( data, data + 16 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &RoundKey192 );
+		kvKey.push_back( &RoundKey192 );
+		
+		try{
+			OpenCL cipher( OpenCL::GPU );
+			
+			const ArrayVector result = cipher.Decrypt( avData, kvKey );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 16 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -468,12 +912,44 @@ namespace AES {
 			
 			const DataArray result = cipher.Decrypt( DataArray( data, data + 32 ), CBCRoundKey192, IVArray192 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 32 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryptionCBC192GPUMulti() {
+		const unsigned char data[] = {
+			0x46, 0xcb, 0xa5, 0xc5, 0x9d, 0x69, 0xee, 0x30, 0x17, 0xa2, 0xfa, 0x1e, 0x37, 0xfb, 0x15, 0xed, 
+			0xe3, 0x2b, 0x06, 0x61, 0xec, 0xa8, 0x4b, 0x2b, 0xf8, 0x80, 0x88, 0x15, 0xac, 0x66, 0x30, 0x22
+		};
+		
+		const unsigned char expected[] = { 
+			0x69, 0xdc, 0x07, 0xf9, 0xd4, 0x05, 0x45, 0x83, 0x59, 0x6d, 0x77, 0x81, 0x45, 0x20, 0x20, 0xa5, 
+			0x08, 0xc0, 0xc7, 0xc0, 0xf3, 0xd0, 0x72, 0xce, 0x58, 0x26, 0x84, 0x7f, 0x4f, 0xfd, 0x01, 0xd6
+		};
+		
+		const DataArray aData( data, data + 32 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		ArrayVector avIV;
+		avIV.push_back( IVArray192 );
+		avIV.push_back( IVArray192 );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &CBCRoundKey192 );
+		kvKey.push_back( &CBCRoundKey192 );
+		
+		try{
+			OpenCL cipher( OpenCL::GPU, Block::Mode::CipherBlockChaining );
+			
+			const ArrayVector result = cipher.Decrypt( avData, kvKey, avIV );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 32 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -513,12 +989,38 @@ namespace AES {
 			
 			const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ), RoundKey256 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 16 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryption256CPUMulti() {
+		const unsigned char data[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const unsigned char expected[] = {
+			0x8e,0xa2,0xb7,0xca,0x51,0x67,0x45,0xbf,0xea,0xfc,0x49,0x90,0x4b,0x49,0x60,0x89 
+		};
+		
+		const DataArray aData( data, data + 16 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &RoundKey256 );
+		kvKey.push_back( &RoundKey256 );
+		
+		try{
+			OpenCL cipher( OpenCL::CPU );
+			
+			const ArrayVector result = cipher.Encrypt( avData, kvKey );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 16 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -541,12 +1043,44 @@ namespace AES {
 			
 			const DataArray result = cipher.Encrypt( DataArray( data, data + 32 ), CBCRoundKey256, IVArray256 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 32 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryptionCBC256CPUMulti() {
+		const unsigned char data[] = { 
+			0xd9, 0x1b, 0xf9, 0xf3, 0x20, 0xf9, 0x3c, 0xa1, 0x79, 0xec, 0x3a, 0x74, 0xa4, 0xe3, 0x6e, 0xed, 
+			0xd6, 0xd6, 0xca, 0xa9, 0x44, 0x61, 0x68, 0x5b, 0x36, 0xb6, 0x13, 0x6e, 0x8e, 0x6e, 0xa7, 0x00
+		};
+		
+		const unsigned char expected[] = {
+			0x11, 0x0e, 0x8a, 0xc4, 0x2c, 0x58, 0xf3, 0xce, 0x73, 0x37, 0xb8, 0xf0, 0x3c, 0x93, 0x04, 0x26, 
+			0x45, 0xd2, 0x53, 0x12, 0xf8, 0x45, 0x61, 0x91, 0x81, 0x85, 0x5f, 0x50, 0x74, 0x9b, 0xed, 0x52
+		};
+		
+		const DataArray aData( data, data + 32 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		ArrayVector avIV;
+		avIV.push_back( IVArray256 );
+		avIV.push_back( IVArray256 );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &CBCRoundKey256 );
+		kvKey.push_back( &CBCRoundKey256 );
+		
+		try{
+			OpenCL cipher( OpenCL::CPU, Block::Mode::CipherBlockChaining );
+			
+			const ArrayVector result = cipher.Encrypt( avData, kvKey, avIV );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 32 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -567,12 +1101,38 @@ namespace AES {
 			
 			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ), RoundKey256 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 16 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryption256CPUMulti() {
+		const unsigned char data[] = {
+			0x8e,0xa2,0xb7,0xca,0x51,0x67,0x45,0xbf,0xea,0xfc,0x49,0x90,0x4b,0x49,0x60,0x89 
+		};
+		
+		const unsigned char expected[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const DataArray aData( data, data + 16 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &RoundKey256 );
+		kvKey.push_back( &RoundKey256 );
+		
+		try{
+			OpenCL cipher( OpenCL::CPU );
+			
+			const ArrayVector result = cipher.Decrypt( avData, kvKey );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 16 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -595,12 +1155,44 @@ namespace AES {
 			
 			const DataArray result = cipher.Decrypt( DataArray( data, data + 32 ), CBCRoundKey256, IVArray256 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 32 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryptionCBC256CPUMulti() {
+		const unsigned char data[] = {
+			0x11, 0x0e, 0x8a, 0xc4, 0x2c, 0x58, 0xf3, 0xce, 0x73, 0x37, 0xb8, 0xf0, 0x3c, 0x93, 0x04, 0x26, 
+			0x45, 0xd2, 0x53, 0x12, 0xf8, 0x45, 0x61, 0x91, 0x81, 0x85, 0x5f, 0x50, 0x74, 0x9b, 0xed, 0x52
+		};
+		
+		const unsigned char expected[] = { 
+			0xd9, 0x1b, 0xf9, 0xf3, 0x20, 0xf9, 0x3c, 0xa1, 0x79, 0xec, 0x3a, 0x74, 0xa4, 0xe3, 0x6e, 0xed, 
+			0xd6, 0xd6, 0xca, 0xa9, 0x44, 0x61, 0x68, 0x5b, 0x36, 0xb6, 0x13, 0x6e, 0x8e, 0x6e, 0xa7, 0x00
+		};
+		
+		const DataArray aData( data, data + 32 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		ArrayVector avIV;
+		avIV.push_back( IVArray256 );
+		avIV.push_back( IVArray256 );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &CBCRoundKey256 );
+		kvKey.push_back( &CBCRoundKey256 );
+		
+		try{
+			OpenCL cipher( OpenCL::CPU, Block::Mode::CipherBlockChaining );
+			
+			const ArrayVector result = cipher.Decrypt( avData, kvKey, avIV );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 32 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -621,12 +1213,38 @@ namespace AES {
 			
 			const DataArray result = cipher.Encrypt( DataArray( data, data + 16 ), RoundKey256 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 16 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryption256GPUMulti() {
+		const unsigned char data[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const unsigned char expected[] = {
+			0x8e,0xa2,0xb7,0xca,0x51,0x67,0x45,0xbf,0xea,0xfc,0x49,0x90,0x4b,0x49,0x60,0x89 
+		};
+		
+		const DataArray aData( data, data + 16 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &RoundKey256 );
+		kvKey.push_back( &RoundKey256 );
+		
+		try{
+			OpenCL cipher( OpenCL::GPU );
+			
+			const ArrayVector result = cipher.Encrypt( avData, kvKey );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 16 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -649,12 +1267,44 @@ namespace AES {
 			
 			const DataArray result = cipher.Encrypt( DataArray( data, data + 32 ), CBCRoundKey256, IVArray256 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 32 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testEncryptionCBC256GPUMulti() {
+		const unsigned char data[] = { 
+			0xd9, 0x1b, 0xf9, 0xf3, 0x20, 0xf9, 0x3c, 0xa1, 0x79, 0xec, 0x3a, 0x74, 0xa4, 0xe3, 0x6e, 0xed, 
+			0xd6, 0xd6, 0xca, 0xa9, 0x44, 0x61, 0x68, 0x5b, 0x36, 0xb6, 0x13, 0x6e, 0x8e, 0x6e, 0xa7, 0x00
+		};
+		
+		const unsigned char expected[] = {
+			0x11, 0x0e, 0x8a, 0xc4, 0x2c, 0x58, 0xf3, 0xce, 0x73, 0x37, 0xb8, 0xf0, 0x3c, 0x93, 0x04, 0x26, 
+			0x45, 0xd2, 0x53, 0x12, 0xf8, 0x45, 0x61, 0x91, 0x81, 0x85, 0x5f, 0x50, 0x74, 0x9b, 0xed, 0x52
+		};
+		
+		const DataArray aData( data, data + 32 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		ArrayVector avIV;
+		avIV.push_back( IVArray256 );
+		avIV.push_back( IVArray256 );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &CBCRoundKey256 );
+		kvKey.push_back( &CBCRoundKey256 );
+		
+		try{
+			OpenCL cipher( OpenCL::GPU, Block::Mode::CipherBlockChaining );
+			
+			const ArrayVector result = cipher.Encrypt( avData, kvKey, avIV );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 32 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -675,12 +1325,38 @@ namespace AES {
 			
 			const DataArray result = cipher.Decrypt( DataArray( data, data + 16 ), RoundKey256 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 16 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryption256GPUMulti() {
+		const unsigned char data[] = {
+			0x8e,0xa2,0xb7,0xca,0x51,0x67,0x45,0xbf,0xea,0xfc,0x49,0x90,0x4b,0x49,0x60,0x89 
+		};
+		
+		const unsigned char expected[] = { 
+			0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff 
+		};
+		
+		const DataArray aData( data, data + 16 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &RoundKey256 );
+		kvKey.push_back( &RoundKey256 );
+		
+		try{
+			OpenCL cipher( OpenCL::GPU );
+			
+			const ArrayVector result = cipher.Decrypt( avData, kvKey );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 16 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		
@@ -703,12 +1379,44 @@ namespace AES {
 			
 			const DataArray result = cipher.Decrypt( DataArray( data, data + 32 ), CBCRoundKey256, IVArray256 );
 			
-			const unsigned int size = result.size();
-			for( unsigned int i = 0; i < size; i++ ){
-				std::ostringstream stream;
-				stream << "Element " << i << " Differs";
-				
-				CPPUNIT_ASSERT_EQUAL_MESSAGE( stream.str(), (int)expected[i], (int)result[i] );
+			AssertArray( DataArray( expected, expected + 32 ), result );
+		}catch( DeviceUnavailiable& e ){
+		
+		}
+	}
+	
+	void OpenCLTest::testDecryptionCBC256GPUMulti() {
+		const unsigned char data[] = {
+			0x11, 0x0e, 0x8a, 0xc4, 0x2c, 0x58, 0xf3, 0xce, 0x73, 0x37, 0xb8, 0xf0, 0x3c, 0x93, 0x04, 0x26, 
+			0x45, 0xd2, 0x53, 0x12, 0xf8, 0x45, 0x61, 0x91, 0x81, 0x85, 0x5f, 0x50, 0x74, 0x9b, 0xed, 0x52
+		};
+		
+		const unsigned char expected[] = { 
+			0xd9, 0x1b, 0xf9, 0xf3, 0x20, 0xf9, 0x3c, 0xa1, 0x79, 0xec, 0x3a, 0x74, 0xa4, 0xe3, 0x6e, 0xed, 
+			0xd6, 0xd6, 0xca, 0xa9, 0x44, 0x61, 0x68, 0x5b, 0x36, 0xb6, 0x13, 0x6e, 0x8e, 0x6e, 0xa7, 0x00
+		};
+		
+		const DataArray aData( data, data + 32 );
+		
+		ArrayVector avData;
+		avData.push_back( aData );
+		avData.push_back( aData );
+		
+		ArrayVector avIV;
+		avIV.push_back( IVArray256 );
+		avIV.push_back( IVArray256 );
+		
+		KeyVector kvKey;
+		kvKey.push_back( &CBCRoundKey256 );
+		kvKey.push_back( &CBCRoundKey256 );
+		
+		try{
+			OpenCL cipher( OpenCL::GPU, Block::Mode::CipherBlockChaining );
+			
+			const ArrayVector result = cipher.Decrypt( avData, kvKey, avIV );
+			
+			for( unsigned int i = 0; i < result.size(); i++ ){
+				AssertArray( DataArray( expected, expected + 32 ), result[i] );
 			}
 		}catch( DeviceUnavailiable& e ){
 		

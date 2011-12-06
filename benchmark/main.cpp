@@ -12,6 +12,7 @@
 using namespace CryptoCL;
 using namespace CryptoCL::Block::AES;
 
+const unsigned int PacketCount = 2;
 const unsigned int AverageIterations = 10;
 const unsigned int StepSize = 16;
 
@@ -31,7 +32,63 @@ void BenchmarkEncryption( const std::string& name, const DataArray& data, const 
 		double average = 0.0;
 		for( unsigned int i = 0; i < AverageIterations; i++ ){
 			loopTime.start();
-			const DataArray encrypted = cipher.Encrypt( dData, key, iv );
+			for( unsigned int j = 0; j < PacketCount; j++ ){
+				const DataArray encrypted = cipher.Encrypt( dData, key, iv );
+			}
+			loopTime.stop();
+			
+			average += loopTime.getElapsedTimeInMilliSec();
+		}
+		average /= AverageIterations;
+
+		stream << size << " " << average << std::endl;
+		
+		size += StepSize;
+	}
+	
+	totalTime.stop();
+	
+	std::cout << name << "_encryption completed in " << totalTime.getElapsedTimeInMilliSec() << "ms" << std::endl;
+}
+
+void BenchmarkEncryptionMulti( const std::string& name, const DataArray& data, const CryptoCL::Cipher& cipher, const CryptoCL::Key& key, const DataArray& iv = DataArray() ){
+	std::ostringstream fileName;
+	fileName << "results_" << name << "multi__encryption.txt";
+
+	std::ofstream stream( fileName.str().c_str() );
+	
+	KeyVector avKey;
+	for( unsigned int i = 0; i < PacketCount; i++ ){
+		avKey.push_back( &key );
+	}
+
+	Timer totalTime, loopTime;
+	totalTime.start();
+	
+	unsigned int size = StepSize;
+	while( size <= data.size() ){
+		const DataArray dData( data.begin(), data.begin() + size );
+		
+		ArrayVector avData;
+		for( unsigned int i = 0; i < PacketCount; i++ ){
+			avData.push_back( dData );
+		}
+		
+		ArrayVector avIV;
+		if( iv.size() > 0 ){
+			for( unsigned int i = 0; i < PacketCount; i++ ){
+				avIV.push_back( DataArray( iv.begin(), iv.begin() + size ) );
+			}
+		}
+		
+		double average = 0.0;
+		for( unsigned int i = 0; i < AverageIterations; i++ ){
+			loopTime.start();
+			if( iv.size() > 0 ){
+				cipher.Encrypt( avData, avKey, avIV );
+			}else{
+				cipher.Encrypt( avData, avKey);
+			}
 			loopTime.stop();
 			
 			average += loopTime.getElapsedTimeInMilliSec();
@@ -64,7 +121,9 @@ void BenchmarkDecryption( const std::string& name, const DataArray& data, const 
 		double average = 0.0;
 		for( unsigned int i = 0; i < AverageIterations; i++ ){
 			loopTime.start();
-			const DataArray decrypted = cipher.Decrypt( eData, key, iv );
+			for( unsigned int j = 0; j < PacketCount; j++ ){
+				const DataArray decrypted = cipher.Decrypt( eData, key, iv );
+			}
 			loopTime.stop();
 			
 			average += loopTime.getElapsedTimeInMilliSec();
@@ -81,11 +140,71 @@ void BenchmarkDecryption( const std::string& name, const DataArray& data, const 
 	std::cout << name << "_decryption completed in " << totalTime.getElapsedTimeInMilliSec() << "ms" << std::endl;
 }
 
+void BenchmarkDecryptionMulti( const std::string& name, const DataArray& data, const CryptoCL::Cipher& cipher, const CryptoCL::Key& key, const DataArray& iv = DataArray() ){
+	std::ostringstream fileName;
+	fileName << "results_" << name << "multi__decryption.txt";
+
+	std::ofstream stream( fileName.str().c_str() );
+	
+	KeyVector avKey;
+	for( unsigned int i = 0; i < PacketCount; i++ ){
+		avKey.push_back( &key );
+	}
+
+	Timer totalTime, loopTime;
+	totalTime.start();
+	
+	unsigned int size = StepSize;
+	while( size <= data.size() ){
+		const DataArray dData( data.begin(), data.begin() + size );
+		
+		ArrayVector avData;
+		for( unsigned int i = 0; i < PacketCount; i++ ){
+			avData.push_back( dData );
+		}
+		
+		ArrayVector avIV;
+		if( iv.size() > 0 ){
+			for( unsigned int i = 0; i < PacketCount; i++ ){
+				avIV.push_back( DataArray( iv.begin(), iv.begin() + size ) );
+			}
+		}
+		
+		double average = 0.0;
+		for( unsigned int i = 0; i < AverageIterations; i++ ){
+			loopTime.start();
+			if( iv.size() > 0 ){
+				cipher.Decrypt( avData, avKey, avIV );
+			}else{
+				cipher.Decrypt( avData, avKey);
+			}
+			loopTime.stop();
+			
+			average += loopTime.getElapsedTimeInMilliSec();
+		}
+		average /= AverageIterations;
+
+		stream << size << " " << average << std::endl;
+		
+		size += StepSize;
+	}
+	
+	totalTime.stop();
+	
+	std::cout << name << "_encryption completed in " << totalTime.getElapsedTimeInMilliSec() << "ms" << std::endl;
+}
+
 enum Mode{ Encryption, Decryption, Both };
 
 void Benchmark( const Mode mode, const std::string& name, const DataArray& dData, const DataArray& eData, const CryptoCL::Cipher& cipher, const CryptoCL::Key& key, const DataArray& iv = DataArray() ){
-	if( mode == Encryption || mode == Both ) BenchmarkEncryption( name, dData, cipher, key, iv );
-	if( mode == Decryption || mode == Both ) BenchmarkDecryption( name, eData, cipher, key, iv );
+	if( mode == Encryption || mode == Both ) {
+		BenchmarkEncryption( name, dData, cipher, key, iv );
+		BenchmarkEncryptionMulti( name, dData, cipher, key, iv );
+	}
+	if( mode == Decryption || mode == Both ) {
+		BenchmarkDecryption( name, eData, cipher, key, iv );
+		BenchmarkDecryptionMulti( name, eData, cipher, key, iv );
+	}
 }
 
 int main( int argc, char* argv[] ) {

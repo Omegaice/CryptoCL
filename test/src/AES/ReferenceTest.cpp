@@ -10,7 +10,7 @@ namespace AES {
 	using namespace CryptoCL;
 	using namespace CryptoCL::Block::AES;
 	
-	void AssertArray( const DataArray& expected, const DataArray& result ){
+	static void AssertArray( const DataArray& expected, const DataArray& result ){
 		CPPUNIT_ASSERT_EQUAL_MESSAGE( "Array Size Differs", (int)expected.size(), (int)result.size() );
 	
 		const unsigned int size = expected.size();

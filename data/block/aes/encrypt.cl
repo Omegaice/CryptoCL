@@ -1,3 +1,5 @@
+#pragma OPENCL EXTENSION cl_amd_printf : enable
+
 __constant uchar rcon[255] = {
 	0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a,
 	0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39,
@@ -91,16 +93,15 @@ void MixColumns( uchar* block ) {
 }
 
 __kernel void encrypt( __global const uchar *rkey, const uint rounds, 
-	__global const uchar *data, __global uchar *result, const uint blocks ) {
+	__global const uchar *data, __global uchar *result, const uint blockNum ) {
 	
-	const size_t idx = get_global_id( 0 );
-	if( idx > blocks ) return;
-	
-	const size_t startPos = BlockSize * idx;
+	const size_t startPos = BlockSize * blockNum;
 	
 	// Create Block
 	uchar block[BlockSize];
-	for( uint i = 0; i < BlockSize; i++) block[i] = data[startPos+i];
+	for( uint i = 0; i < BlockSize; i++){
+		block[i] = data[startPos+i];
+	}
 	
 	AddRoundKey( rkey, block, 0 );
 	

@@ -164,12 +164,9 @@ void InverseMixColumns( uchar* block ) {
 }
 
 __kernel void decrypt( __global const uchar *rkey, const uint rounds, 
-	__global const uchar *data, __global uchar *result, const uint blocks ) {
+	__global const uchar *data, __global uchar *result, const uint blockNum ) {
 	
-	const size_t idx = get_global_id( 0 );
-	if( idx > blocks ) return;
-	
-	const size_t startPos = BlockSize * idx;
+	const size_t startPos = BlockSize * blockNum;
 	
 	// Create Block
 	uchar block[BlockSize];

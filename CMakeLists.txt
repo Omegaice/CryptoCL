@@ -69,17 +69,10 @@ file( GLOB BASE_DATA data/*.cl )
 source_group( "data" FILES ${BASE_DATA} )
 file( GLOB BLOCK_DATA data/block/*.cl )
 source_group( "data\\Block" FILES ${BLOCK_DATA} )
-file( GLOB ECB_BLOCK_DATA data/block/ecb/*.cl )
-source_group( "data\\Block\\ECB" FILES ${ECB_BLOCK_DATA} )
-file( GLOB AES_ECB_BLOCK_DATA data/block/ecb/aes/*.cl )
-source_group( "data\\Block\\ECB\\AES" FILES ${AES_ECB_BLOCK_DATA} )
-file( GLOB CBC_BLOCK_DATA data/block/cbc/*.cl )
-source_group( "data\\Block\\CBC" FILES ${CBC_BLOCK_DATA} )
-file( GLOB AES_CBC_BLOCK_DATA data/block/cbc/aes/*.cl )
-source_group( "data\\Block\\CBC\\AES" FILES ${AES_CBC_BLOCK_DATA} )
+file( GLOB AES_BLOCK_DATA data/block/aes/*.cl )
+source_group( "data\\Block\\AES" FILES ${AES_BLOCK_DATA} )
 
-set( PROJECT_DATA ${BASE_DATA} ${BLOCK_DATA} ${ECB_BLOCK_DATA} ${AES_ECB_BLOCK_DATA}
-	${CBC_BLOCK_DATA} ${AES_CBC_BLOCK_DATA} )
+set( PROJECT_DATA ${BASE_DATA} ${BLOCK_DATA} ${AES_BLOCK_DATA} )
 
 # Code Coverage
 option( CODE_COVERAGE "Build library with code coverage instrumentation" Off )
