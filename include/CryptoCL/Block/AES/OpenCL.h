@@ -63,12 +63,6 @@ namespace CryptoCL {
 						const CryptoCL::Key& key, const DataArray& iv = DataArray() ) const;
 						
 					const tqd::Compute::OpenCL::Event 
-					DecryptBlock( const tqd::Compute::OpenCL::Buffer& key, 
-						const tqd::Compute::OpenCL::Buffer& input, 
-						const tqd::Compute::OpenCL::Buffer& result, 
-						unsigned int rounds, unsigned int block ) const;
-						
-					const tqd::Compute::OpenCL::Event 
 					DecryptChunk( const DataArray& data, DataArray& result, const CryptoCL::Key& key ) const;
 					
 					const tqd::Compute::OpenCL::Event 

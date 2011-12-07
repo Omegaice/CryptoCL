@@ -163,13 +163,15 @@ namespace CryptoCL {
 				ReadOnlyBuffer Input( *mContext, data );
 				ReadWriteBuffer Result( *mContext, data.size() );
 				
-				EventList list;
-				for( unsigned int i = 0; i < Blocks; i++ ){
-					Event block = EncryptBlock( RoundKey, Input, Result, Rounds, i );
-					list.push_back( block );
-				}
+				Kernel kernel = mEncryption.GetKernel( "encrypt" );
 				
-				return mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0], list );
+				kernel.Parameter( 0, RoundKey );
+				kernel.Parameter( 1, sizeof(cl_int), &Rounds );
+				kernel.Parameter( 2, Input );
+				kernel.Parameter( 3, Result );
+				kernel.Parameter( 4, sizeof(cl_int), &Blocks );
+				
+				return mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0], mQueue->RangeKernel( kernel, ( Blocks % 2 == 0 ) ? Blocks : Blocks + 1 ) );
 			}
 			
 			const Event OpenCL::EncryptChunkCBC( const DataArray& data, DataArray& result, const CryptoCL::Key& key, const DataArray& iv ) const {
@@ -193,7 +195,7 @@ namespace CryptoCL {
 			}
 			
 			const Event OpenCL::EncryptBlock( const Buffer& key, const Buffer& input, const Buffer& result, unsigned int rounds, unsigned int block, const Event& event ) const {
-				Kernel kernel = mEncryption.GetKernel( "encrypt" );
+				Kernel kernel = mEncryption.GetKernel( "encryptBlock" );
 				
 				kernel.Parameter( 0, key );
 				kernel.Parameter( 1, sizeof(cl_int), &rounds );
@@ -253,12 +255,15 @@ namespace CryptoCL {
 				ReadOnlyBuffer Input( *mContext, data );
 				ReadWriteBuffer Result( *mContext, data.size() );
 								
-				EventList list;
-				for( unsigned int i = 0; i < Blocks; i++ ){
-					list.push_back( DecryptBlock( RoundKey, Input, Result, Rounds, i ) );
-				}
+				Kernel kernel = mDecryption.GetKernel( "decrypt" );
 				
-				return mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0], list );
+				kernel.Parameter( 0, RoundKey );
+				kernel.Parameter( 1, sizeof(cl_int), &Rounds );
+				kernel.Parameter( 2, Input );
+				kernel.Parameter( 3, Result );
+				kernel.Parameter( 4, sizeof(cl_int), &Blocks );
+				
+				return mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0], mQueue->RangeKernel( kernel, ( Blocks % 2 == 0 ) ? Blocks : Blocks + 1 ) );
 			}
 			
 			const Event OpenCL::DecryptChunkCBC( const DataArray& data, DataArray& result, const CryptoCL::Key& key, const DataArray& iv ) const {
@@ -275,24 +280,16 @@ namespace CryptoCL {
 				
 				ReadOnlyBuffer Previous( *mContext, previous );
 								
-				EventList list;
-				for( unsigned int i = 0; i < Blocks; i++ ){
-					list.push_back( XORBlock( Result, i, Previous, i, DecryptBlock( RoundKey, Input, Result, Rounds, i ) ) );
-				}
+				Kernel kernel = mDecryption.GetKernel( "decryptCBC" );
 				
-				return mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0], list );
-			}
-			
-			const Event OpenCL::DecryptBlock( const Buffer& key, const Buffer& input, const Buffer& result, unsigned int rounds, unsigned int block ) const {
-				Kernel kernel = mDecryption.GetKernel( "decrypt" );
+				kernel.Parameter( 0, RoundKey );
+				kernel.Parameter( 1, sizeof(cl_int), &Rounds );
+				kernel.Parameter( 2, Previous );
+				kernel.Parameter( 3, Input );
+				kernel.Parameter( 4, Result );
+				kernel.Parameter( 5, sizeof(cl_int), &Blocks );
 				
-				kernel.Parameter( 0, key );
-				kernel.Parameter( 1, sizeof(cl_int), &rounds );
-				kernel.Parameter( 2, input );
-				kernel.Parameter( 3, result );
-				kernel.Parameter( 4, sizeof( cl_int ), &block );
-				
-				return mQueue->RangeKernel( kernel, 1 );
+				return mQueue->ReadBuffer( Result, sizeof( char ) * data.size(), &result[0], mQueue->RangeKernel( kernel, ( Blocks % 2 == 0 ) ? Blocks : Blocks + 1 ) );
 			}
 			
 			const Event OpenCL::XORBlock( const Buffer& block, const size_t blockOffset, const Buffer& value, const size_t valOffset, const Event& event ) const {
@@ -305,9 +302,9 @@ namespace CryptoCL {
 				
 				Event retVal;
 				if( !event.isValid() ){
-					retVal = mQueue->RangeKernel( kernel, 1 );
+					retVal = mQueue->Execute( kernel );
 				}else{
-					retVal = mQueue->RangeKernel( kernel, 1, event );
+					retVal = mQueue->Execute( kernel, event );
 				}
 			
 				return retVal;

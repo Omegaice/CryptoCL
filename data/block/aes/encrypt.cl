@@ -92,11 +92,44 @@ void MixColumns( uchar* block ) {
 	MixColumn( block, 12 );
 }
 
-__kernel void encrypt( __global const uchar *rkey, const uint rounds, 
+__kernel void encryptBlock( __global const uchar *rkey, const uint rounds, 
 	__global const uchar *data, __global uchar *result, const uint blockNum ) {
 	
 	const size_t startPos = BlockSize * blockNum;
 	
+	// Create Block
+	uchar block[BlockSize];
+	for( uint i = 0; i < BlockSize; i++){
+		block[i] = data[startPos+i];
+	}
+	
+	AddRoundKey( rkey, block, 0 );
+	
+	// Calculate Rounds
+	for( uint j = 1; j < rounds; j++ ){
+		SubBytes( block );
+		ShiftRows( block );
+		MixColumns( block );
+		AddRoundKey( rkey, block, j );
+	}
+	
+	SubBytes( block );
+	ShiftRows( block );
+	AddRoundKey( rkey, block, rounds );
+		
+	// Copy Result
+	for( uint i = 0; i < BlockSize; i++ ) {
+		result[startPos+i] = block[i];
+	}
+}
+
+__kernel void encrypt( __global const uchar *rkey, const uint rounds, __global const uchar *data, __global uchar *result, const uint blocks ) {
+	
+	const size_t id = get_global_id( 0 );
+	if( id > blocks ) return;
+	
+	const size_t startPos = BlockSize * id;
+		
 	// Create Block
 	uchar block[BlockSize];
 	for( uint i = 0; i < BlockSize; i++){
