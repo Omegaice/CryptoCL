@@ -110,6 +110,7 @@ int main (int argc, char* argv[])
 	for( size_t i = 0; i < keySize; i++ ){
 		key[i] = rand();
 	}
+	const RoundKey rKey( key );
 	
 	std::vector<unsigned char> dData( dataSize );
 	for( size_t i = 0; i < dataSize; i++ ){
@@ -117,12 +118,11 @@ int main (int argc, char* argv[])
 	}
 				
 	OpenCL cipher( device );
-	cipher.Initialise( RoundKey( key ) );
 	
-	std::vector<unsigned char> eData = cipher.Encrypt( dData );
+	std::vector<unsigned char> eData = cipher.Encrypt( dData, rKey );
 	
 	while( true ){
-		std::vector<unsigned char> decrypt = cipher.Decrypt( eData );
+		std::vector<unsigned char> decrypt = cipher.Decrypt( eData, rKey );
 		for( size_t i = 0; i < dataSize; i++ ){
 			if( decrypt[i] != dData[i] ) {
 				timeval endTime;
